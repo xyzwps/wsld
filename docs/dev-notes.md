@@ -91,3 +91,39 @@ WindowsAppSDK 2.5.1 的 `ProgressRing` 上不存在 `IsRing`,写进 XAML 会报
 (`MSB3027/MSB3021`),`-v q` 下很容易被忽略。
 于是"改了 A 就崩溃"的结论可能其实是"编译失败,跑的还是上一个坏二进制"。
 每轮之间先 `Get-Process WslcDesktop | Stop-Process -Force`,再构建并确认退出码为 0。
+## 9. System.Text.Json 的自定义转换器**不会**被 null 调用
+
+**症状**:`{"Containers":null}` 之后 `public string Containers { get; set; } = ""` 变成真正的 null,
+任何 `.Trim()` 都抛 `NullReferenceException`。单元测试里加了 null 用例才暴露出来。
+
+**根因**:遇到 JSON `null` 时,STJ 直接给属性赋 `default(T)`(引用类型即 null),**不会**调用
+`JsonConverter<T>.Read`,所以转换器里写的 `JsonTokenType.Null => ""` 是死代码。
+
+**修复**:在 setter 里归一化,别让 null 进对象:
+
+```csharp
+private string _containers = "";
+public string Containers { get => _containers; set => _containers = value ?? ""; }
+```
+
+## 10. `x:Bind` + `Mode=OneWay` 绑到不实现 INPC 的模型会报 WMC1506
+
+镜像行直接绑 `ImageInfo`(纯数据,没有通知),MarkupCompile 报
+`WMC1506: OneWay bindings require at least one of their steps to support raising notifications`。
+列表刷新是整体替换 ItemsSource,行内字段根本不需要通知 —— 改成 `Mode=OneTime` 就 0 警告了。
+(如果以后要做行内可变状态,再引入实现 INPC 的行 ViewModel,而不是把警告留着。)
+
+## 11. 用 UI Automation 验证"点了导航项真的换页了"
+
+不用装任何自动化工具,pwsh 自带的能力就够:
+
+```powershell
+Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
+$root = [System.Windows.Automation.AutomationElement]::RootElement
+$win  = $root.FindFirst('Children', (New-Object System.Windows.Automation.PropertyCondition(
+          [System.Windows.Automation.AutomationElement]::NameProperty, 'WSLC Desktop')))
+$item = $win.FindFirst('Descendants', (New-Object System.Windows.Automation.PropertyCondition(
+          [System.Windows.Automation.AutomationElement]::NameProperty, '镜像')))
+# 关键:NavigationViewItem 不支持 InvokePattern("不支持的模式"),要用 SelectionItemPattern
+($item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
+```

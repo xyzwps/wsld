@@ -5,7 +5,7 @@ using WslcDesktop.Core.Models;
 namespace WslcDesktop.Core.Parsing;
 
 /// <summary>
-/// 解析 wslc --format json 输出(功能 001 · AC3)。
+/// 解析 wslc --format json 输出(功能 001 · AC3,功能 003 · AC4)。
 /// wslc 3.0.1 实际输出为 NDJSON:每行一个 JSON 对象,且无数据时输出为空。
 /// 为稳健起见,同时兼容:标准 JSON 数组、美化缩进 JSON、单个对象。
 /// </summary>
@@ -16,38 +16,44 @@ public static class WslcJsonParser
         PropertyNameCaseInsensitive = true,
     };
 
-    public static IReadOnlyList<ContainerInfo> ParseContainers(string output)
+    public static IReadOnlyList<ContainerInfo> ParseContainers(string output) => Parse<ContainerInfo>(output, "容器");
+
+    public static IReadOnlyList<ImageInfo> ParseImages(string output) => Parse<ImageInfo>(output, "镜像");
+
+    private static IReadOnlyList<T> Parse<T>(string output, string typeLabel)
+        where T : class
     {
         var text = output.Trim('\r', '\n', ' ', '\t', '\uFEFF');
-        if (text.Length == 0) return Array.Empty<ContainerInfo>();
+        if (text.Length == 0) return Array.Empty<T>();
 
-        if (TryParseWholeDocument(text, out var whole)) return whole;
+        if (TryParseWholeDocument<T>(text, out var whole)) return whole;
 
         // NDJSON:逐行解析,坏行报行号与原文片段。
         var lines = text.Split('\n');
-        var items = new List<ContainerInfo>();
+        var items = new List<T>();
         for (var i = 0; i < lines.Length; i++)
         {
             var line = lines[i].Trim();
             if (line.Length == 0) continue;
-            items.Add(DeserializeOrThrow(line, lineNumber: i + 1));
+            items.Add(DeserializeOrThrow<T>(line, i + 1, typeLabel));
         }
         return items;
     }
 
-    private static bool TryParseWholeDocument(string text, out IReadOnlyList<ContainerInfo> items)
+    private static bool TryParseWholeDocument<T>(string text, out IReadOnlyList<T> items)
+        where T : class
     {
-        items = Array.Empty<ContainerInfo>();
+        items = Array.Empty<T>();
         if (text[0] is not ('[' or '{')) return false;
         try
         {
             var node = JsonNode.Parse(text);
             if (node is JsonArray array)
             {
-                var list = new List<ContainerInfo>(array.Count);
+                var list = new List<T>(array.Count);
                 foreach (var element in array)
                 {
-                    list.Add(element?.Deserialize<ContainerInfo>(Options)
+                    list.Add(element?.Deserialize<T>(Options)
                         ?? throw new JsonException("数组中存在 null 元素"));
                 }
                 items = list;
@@ -55,7 +61,7 @@ public static class WslcJsonParser
             }
             if (node is JsonObject obj)
             {
-                items = new[] { obj.Deserialize<ContainerInfo>(Options) ?? throw new JsonException("空对象") };
+                items = new[] { obj.Deserialize<T>(Options) ?? throw new JsonException("空对象") };
                 return true;
             }
             return false;
@@ -66,18 +72,19 @@ public static class WslcJsonParser
         }
     }
 
-    private static ContainerInfo DeserializeOrThrow(string line, int lineNumber)
+    private static T DeserializeOrThrow<T>(string line, int lineNumber, string typeLabel)
+        where T : class
     {
         try
         {
-            return JsonSerializer.Deserialize<ContainerInfo>(line, Options)
+            return JsonSerializer.Deserialize<T>(line, Options)
                 ?? throw new JsonException("内容为 null");
         }
         catch (JsonException ex)
         {
             var snippet = line.Length > 120 ? line[..120] + "…" : line;
             throw new FormatException(
-                $"wslc 输出第 {lineNumber} 行不是有效的容器 JSON:{ex.Message}(原文片段:{snippet})", ex);
+                $"wslc 输出第 {lineNumber} 行不是有效的{typeLabel} JSON:{ex.Message}(原文片段:{snippet})", ex);
         }
     }
 }
