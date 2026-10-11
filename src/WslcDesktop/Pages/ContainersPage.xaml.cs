@@ -1,16 +1,18 @@
-using System.Collections.Specialized;
 using System.Globalization;
+using System.IO;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WslcDesktop.Core;
 using WslcDesktop.Core.ViewModels;
-using WslcDesktop.Converters;
 using WslcDesktop.Services;
 
 namespace WslcDesktop.Pages;
 
-/// <summary>容器列表页(功能 001):启动即加载、搜索/过滤、自动刷新、错误展示。</summary>
+/// <summary>
+/// 容器列表页。功能 001:列表/搜索/自动刷新;功能 002:行内生命周期操作。
+/// 页面只负责呈现与交互约定(删除前确认),真正的命令拼装与状态编排都在 Core 的 ViewModel 里。
+/// </summary>
 public sealed partial class ContainersPage : Page
 {
     public ContainersPageViewModel ViewModel { get; }
@@ -23,24 +25,65 @@ public sealed partial class ContainersPage : Page
 
         InitializeComponent();
 
-        // 转换器同时注册到页面资源,确保模板里的 StaticResource 一定能解析到。
-        Resources["BoolToVis"] = new BoolToVisibilityConverter();
-
         IntervalBox.SelectedIndex = 2; // 默认 5 秒,与 ViewModel 默认值一致
-        ViewModel.Items.CollectionChanged += Items_CollectionChanged;
+        ViewModel.Items.CollectionChanged += (_, _) => UpdateEmptyHint();
         UpdateEmptyHint();
 
         Loaded += (_, _) => ViewModel.StartAutoRefresh();
         Unloaded += (_, _) => ViewModel.StopAutoRefresh();
     }
 
-    private void Items_CollectionChanged(object? sender, NotifyCollectionChangedEventArgs e) =>
-        UpdateEmptyHint();
+    /// <summary>
+    /// 删除按钮走 Click 而不是 Command:确认对话框属于界面层职责(功能 002 · AC10),
+    /// 确认之后再交给 RemoveCommand —— 由它决定是否使用强制删除,界面不重复这段逻辑。
+    /// </summary>
+    private async void RemoveButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement { DataContext: ContainerItemViewModel item }) return;
 
-    private void UpdateEmptyHint() =>
+        var running = item.IsRunning;
+        var dialog = new ContentDialog
+        {
+            XamlRoot = XamlRoot, // 非打包 WinUI 3 必须显式设置,否则 ShowAsync 抛异常
+            Title = "删除容器",
+            Content = BuildDeleteMessage(item.DisplayName, running),
+            PrimaryButtonText = "删除",
+            CloseButtonText = "取消",
+            DefaultButton = ContentDialogButton.Close,
+        };
+
+        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
+
+        await item.RemoveCommand.ExecuteAsync(null);
+    }
+
+    private static object BuildDeleteMessage(string name, bool running)
+    {
+        var panel = new StackPanel { Spacing = 8 };
+        panel.Children.Add(new TextBlock
+        {
+            Text = $"确定要删除容器 {name} 吗?此操作不可恢复。",
+            TextWrapping = TextWrapping.Wrap,
+        });
+        if (running)
+        {
+            panel.Children.Add(new TextBlock
+            {
+                Text = "该容器正在运行,将强制停止并删除(wslc remove -f)。",
+                TextWrapping = TextWrapping.Wrap,
+                Foreground = (Microsoft.UI.Xaml.Media.Brush)
+                    Microsoft.UI.Xaml.Application.Current.Resources["SystemFillColorCriticalBrush"],
+            });
+        }
+        return panel;
+    }
+
+    private void UpdateEmptyHint()
+    {
         EmptyHint.Visibility = ViewModel.Items.Count == 0 && !ViewModel.HasError
             ? Visibility.Visible
             : Visibility.Collapsed;
+    }
 
     private void Interval_Changed(object sender, SelectionChangedEventArgs e)
     {

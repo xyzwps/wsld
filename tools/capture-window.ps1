@@ -2,6 +2,7 @@ param([string]$ProcessName = "WslcDesktop", [string]$OutFile = "capture.png")
 Add-Type -AssemblyName System.Drawing
 $src = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot "win32-cap.cs")
 Add-Type -TypeDefinition $src
+[void][Win32Cap]::SetProcessDPIAware()  # 让窗口坐标与屏幕像素一致,否则截到的是缩放后的裁切区域
 $pids = @(Get-Process -Name $ProcessName -ErrorAction SilentlyContinue | ForEach-Object { [uint32]$_.Id })
 if ($pids.Count -eq 0) { Write-Error "process not running"; exit 1 }
 $found = New-Object Collections.ArrayList

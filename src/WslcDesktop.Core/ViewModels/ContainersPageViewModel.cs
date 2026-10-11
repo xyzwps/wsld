@@ -3,17 +3,20 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WslcDesktop.Core.Models;
 using WslcDesktop.Core.Services;
+using WslcDesktop.Core.WslcCli;
 
 namespace WslcDesktop.Core.ViewModels;
 
 /// <summary>
-/// 容器列表页 ViewModel(功能 001)。
-/// 构造时自动发起首次刷新(AC1);支持搜索/过滤(AC6)、汇总、自动刷新(AC7)。
+/// 容器列表页 ViewModel。
+/// 功能 001:启动即加载、搜索过滤、汇总、自动刷新、刷新防重入。
+/// 功能 002:启动/停止/重启/删除,全局单操作互斥,成功后刷新一次。
 /// </summary>
 public sealed partial class ContainersPageViewModel : ObservableObject
 {
     private readonly ContainersService _service;
     private readonly IUIThread? _uiThread;
+    private readonly Dictionary<string, ContainerItemViewModel> _known = new();
     private List<ContainerInfo> _all = new();
     private volatile bool _refreshing;
     private CancellationTokenSource? _autoRefreshCts;
@@ -26,22 +29,23 @@ public sealed partial class ContainersPageViewModel : ObservableObject
         _ = RefreshAsync(CancellationToken.None); // AC1:启动即加载,失败只展示错误不崩溃
     }
 
-    public ObservableCollection<ContainerInfo> Items { get; } = new();
+    public ObservableCollection<ContainerItemViewModel> Items { get; } = new();
 
     public IAsyncRelayCommand RefreshCommand { get; }
 
-    /// <summary>最近一次成功加载的全部容器(未过滤)数量。</summary>
     [ObservableProperty] private int _totalCount;
-
-    /// <summary>其中运行中的数量。</summary>
     [ObservableProperty] private int _runningCount;
-
     [ObservableProperty] private string? _error;
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private bool _showStopped = true;
     [ObservableProperty] private int _autoRefreshSeconds = 5;
     [ObservableProperty] private string _lastRefreshedAtText = "尚未刷新";
+
+    /// <summary>是否有生命周期操作正在进行(功能 002 · AC5)。用字段而非自动属性,避免通知风暴。</summary>
+    public bool IsBusy => Volatile.Read(ref _operationActive) != 0;
+
+    private int _operationActive;
 
     public string Summary => $"共 {TotalCount} 个容器 · {RunningCount} 个运行中";
 
@@ -51,10 +55,13 @@ public sealed partial class ContainersPageViewModel : ObservableObject
     partial void OnSearchTextChanged(string value) => Rebuild();
     partial void OnShowStoppedChanged(bool value) => Rebuild();
 
-    /// <summary>刷新列表。上一次刷新未完成时直接返回(AC7 防重入)。</summary>
+    /// <summary>
+    /// 刷新列表。上一次刷新未完成时直接返回(功能 001 · AC7);
+    /// 有操作正在进行时同样跳过,避免列表在操作过程中被替换(功能 002 · AC6)。
+    /// </summary>
     public async Task RefreshAsync(CancellationToken cancellationToken)
     {
-        if (_refreshing) return;
+        if (_refreshing || IsBusy) return;
         _refreshing = true;
         try
         {
@@ -69,8 +76,8 @@ public sealed partial class ContainersPageViewModel : ObservableObject
             }
             catch (Exception ex)
             {
-                // AC1:失败保留上一次成功数据,仅展示错误
-                await RunOnUiAsync(() => Error = ex.Message).ConfigureAwait(false);
+                // 功能 001 · AC1:失败保留上一次成功数据,仅展示错误
+                await RunOnUiAsync(() => Error = WslcError.Describe(ex)).ConfigureAwait(false);
                 return;
             }
 
@@ -90,6 +97,53 @@ public sealed partial class ContainersPageViewModel : ObservableObject
         finally
         {
             _refreshing = false;
+        }
+    }
+
+    /// <summary>
+    /// 执行一次容器操作(功能 002)。成功则刷新一次(AC7),失败只展示清洗后的错误(AC8)。
+    /// 同一时刻只允许一个操作(AC5),重复调用会被直接忽略。
+    /// </summary>
+    public async Task ExecuteAsync(
+        ContainerItemViewModel item,
+        ContainerAction action,
+        bool force = false,
+        CancellationToken cancellationToken = default)
+    {
+        if (item is null) throw new ArgumentNullException(nameof(item));
+        if (Interlocked.CompareExchange(ref _operationActive, 1, 0) != 0) return;
+
+        var succeeded = false;
+        item.IsBusy = true;
+        OnPropertyChanged(nameof(IsBusy));
+        RefreshActionStates();
+        try
+        {
+            try
+            {
+                await _service.RunAsync(action, item.Id, force, cancellationToken).ConfigureAwait(false);
+                succeeded = true;
+            }
+            catch (OperationCanceledException)
+            {
+                // 取消视为"什么都没发生",不报错也不刷新。
+            }
+            catch (Exception ex)
+            {
+                await RunOnUiAsync(() => Error = WslcError.Describe(ex)).ConfigureAwait(false);
+            }
+        }
+        finally
+        {
+            item.IsBusy = false;
+            Volatile.Write(ref _operationActive, 0);
+            OnPropertyChanged(nameof(IsBusy));
+            RefreshActionStates();
+        }
+
+        if (succeeded)
+        {
+            await RefreshAsync(cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -124,16 +178,61 @@ public sealed partial class ContainersPageViewModel : ObservableObject
         _autoRefreshCts = null;
     }
 
+    private void RefreshActionStates()
+    {
+        foreach (var item in Items)
+        {
+            item.RaiseActionStates();
+        }
+    }
+
     private void Rebuild()
     {
         var needle = SearchText.Trim();
-        Items.Clear();
+        var wanted = new List<ContainerItemViewModel>();
+
         foreach (var container in _all)
         {
             if (!ShowStopped && !container.IsRunning) continue;
             if (needle.Length > 0 && !Matches(container, needle)) continue;
-            Items.Add(container);
+
+            // AC11:按 ID 复用行对象,只替换数据,保住 IsBusy 与按钮状态。
+            if (!_known.TryGetValue(container.Id, out var item))
+            {
+                item = new ContainerItemViewModel(this, container);
+                _known[container.Id] = item;
+            }
+            else
+            {
+                item.UpdateModel(container);
+            }
+            wanted.Add(item);
         }
+
+        foreach (var stale in _known.Keys.Where(id => !_all.Any(c => c.Id == id)).ToList())
+        {
+            _known.Remove(stale);
+        }
+
+        if (!SameSequence(Items, wanted))
+        {
+            Items.Clear();
+            foreach (var item in wanted)
+            {
+                Items.Add(item);
+            }
+        }
+    }
+
+    /// <summary>逐元素引用比较:内容没变时完全不重建 Items,避免界面闪断。</summary>
+    private static bool SameSequence(IReadOnlyList<ContainerItemViewModel> current, IReadOnlyList<ContainerItemViewModel> wanted)
+    {
+        if (current.Count != wanted.Count) return false;
+        for (var i = 0; i < current.Count; i++)
+        {
+            if (!ReferenceEquals(current[i], wanted[i])) return false;
+        }
+        return true;
     }
 
     private static bool Matches(ContainerInfo container, string needle) =>

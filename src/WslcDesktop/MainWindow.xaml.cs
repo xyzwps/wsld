@@ -1,3 +1,5 @@
+using Microsoft.UI.Windowing;
+using Windows.Graphics;
 using Microsoft.UI.Xaml;
 using WslcDesktop.Pages;
 
@@ -14,5 +16,25 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
         Title = "WSLC Desktop · 容器管理";
         RootHost.Children.Add(new ContainersPage());
+        ConfigureWindow();
+    }
+
+    private void ConfigureWindow()
+    {
+        try
+        {
+            var appWindow = AppWindow;
+            appWindow.Resize(new SizeInt32(1180, 780));
+            if (appWindow.Presenter is OverlappedPresenter presenter)
+            {
+                presenter.IsMaximizable = true;
+                presenter.IsResizable = true;
+            }
+            appWindow.Move(new PointInt32(80, 60));
+        }
+        catch (Exception ex)
+        {
+            App.Log("ConfigureWindow failed: " + ex);
+        }
     }
 }
