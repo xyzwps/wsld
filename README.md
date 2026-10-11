@@ -10,7 +10,7 @@
 | 001 | 容器列表 | 已实现 | docs/specs/001-container-list.md |
 | 002 | 容器生命周期操作(启动/停止/重启/删除) | 已实现 | docs/specs/002-container-actions.md |
 | 003 | 镜像列表与应用导航 | 已实现 | docs/specs/003-images.md |
-| 004 | 镜像操作(拉取 / 删除) | 规划 | — |
+| 004 | 镜像操作(拉取 / 删除) | 已实现 | docs/specs/004-image-actions.md |
 | 005 | 容器日志 | 规划 | — |
 | 006 | 进入容器(执行命令) | 规划 | — |
 | 007 | 资源统计 stats | 规划 | — |
@@ -32,9 +32,9 @@ dotnet run --project src/WslcDesktop   # 启动桌面应用
 要求:Windows 11 + 已安装 WSL 3(含 `wslc.exe`,默认位于 `C:\Program Files\WSL\wslc.exe`)。
 
 ## 端到端冒烟测试(可选)
-默认 `dotnet test` 只跑不依赖真实 `wslc` 的单元测试(110 个)。
+默认 `dotnet test` 只跑不依赖真实 `wslc` 的单元测试(167 个,其中 6 个是真实 CLI 冒烟的占位)。
 打开真实 CLI 测试:容器那条会自行创建一个专用容器,跑完 启动/停止/重启/删除 一整个来回后自动清理;
-镜像那条只读取,不创建不删除。
+镜像那几条重复拉取已存在的镜像、尝试删除正被容器引用的镜像(引擎会拒绝,本机无损)、给已有镜像打一个临时标签再删掉它。
 ```powershell
 $env:WSLC_DESKTOP_INTEGRATION = "1"
 dotnet test --filter FullyQualifiedName~Integration

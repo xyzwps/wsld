@@ -4,11 +4,10 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:WslcDesktop.Core.ViewModels"
-    xmlns:m="using:WslcDesktop.Core.Models"
 >
-    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto">
 
-        <!-- 错误条(功能 003 · AC7) -->
+        <!-- 失败提示(功能 003 · AC7 / 功能 004 · AC9:失败不丢数据) -->
         <InfoBar Grid.Row="0"
                  Margin="12,12,12,0"
                  Severity="Error"
@@ -16,8 +15,61 @@
                  IsClosable="False"
                  Message="{x:Bind ViewModel.Error, Mode=OneWay}" />
 
-        <!-- 工具栏(功能 003 · AC12:没有自动刷新,只有手动刷新) -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Padding="12,12,12,0">
+        <!-- 成功提示(功能 004 · AC14:绿色 InfoBar) -->
+        <InfoBar Grid.Row="1"
+                 Margin="12,12,12,0"
+                 Severity="Success"
+                 IsOpen="{x:Bind ViewModel.HasNotice, Mode=OneWay}"
+                 IsClosable="False"
+                 Message="{x:Bind ViewModel.Notice, Mode=OneWay}" />
+
+        <!-- 拉取区(功能 004 · AC14) -->
+        <Border Grid.Row="2"
+                Margin="12,12,12,0"
+                Padding="12"
+                CornerRadius="8"
+                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
+                BorderThickness="1">
+            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="8" RowSpacing="8">
+
+                <TextBox x:Name="PullBox"
+                         Grid.Row="0" Grid.Column="0"
+                         PlaceholderText="镜像引用,例如 docker.1ms.run/library/redis:7"
+                         Text="{x:Bind ViewModel.PullText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         KeyDown="PullBox_KeyDown" />
+
+                <Button Grid.Row="0" Grid.Column="1"
+                        Content="拉取"
+                        MinWidth="72"
+                        ToolTipService.ToolTip="拉取镜像 (wslc pull),也可以直接按回车"
+                        Command="{x:Bind ViewModel.PullCommand, Mode=OneTime}"
+                        IsEnabled="{x:Bind ViewModel.CanPull, Mode=OneWay}" />
+
+                <Button x:Name="CancelButton"
+                        Grid.Row="0" Grid.Column="2"
+                        Content="取消"
+                        MinWidth="60"
+                        ToolTipService.ToolTip="终止正在进行的拉取"
+                        Command="{x:Bind ViewModel.CancelPullCommand, Mode=OneTime}"
+                        Visibility="{x:Bind ViewModel.IsPulling, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+
+                <!-- 进度(功能 004 · AC7:实测拿不到百分比,只报"在做什么 + 已等待几秒") -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                            Orientation="Horizontal" Spacing="8"
+                            Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                    <ProgressRing Width="16" Height="16" VerticalAlignment="Center"
+                                  IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
+                    <TextBlock FontSize="12" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="{x:Bind ViewModel.BusyText, Mode=OneWay}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- 工具栏(功能 003 · AC12:不自动轮询,只有手动刷新) -->
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Padding="12,12,12,0">
             <TextBox x:Name="SearchBox"
                      PlaceholderText="搜索仓库名 / 标签 / ID"
                      Width="280"
@@ -25,51 +77,73 @@
                      VerticalAlignment="Bottom"
                      Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
             <Button Grid.Column="1" Content="刷新" VerticalAlignment="Bottom"
-                    Command="{x:Bind ViewModel.RefreshCommand}" />
+                    Command="{x:Bind ViewModel.RefreshCommand, Mode=OneTime}" />
         </Grid>
 
         <!-- 汇总(AC10) -->
-        <TextBlock Grid.Row="2"
+        <TextBlock Grid.Row="4"
                    Margin="12,12,12,4"
                    Text="{x:Bind ViewModel.Summary, Mode=OneWay}"
                    Style="{ThemeResource BodyTextBlockStyle}"
                    Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
-        <Border Grid.Row="3" Height="1" Margin="12,0"
+        <Border Grid.Row="5" Height="1" Margin="12,0"
                 Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
         <!-- 镜像列表 -->
-        <Grid Grid.Row="4" Margin="12,4,12,0">
+        <Grid Grid.Row="6" Margin="12,4,12,0">
             <ListView x:Name="ImageList"
                       ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
                       SelectionMode="None"
                       IsItemClickEnabled="False">
                 <ListView.ItemTemplate>
-                    <DataTemplate x:DataType="m:ImageInfo">
-                        <StackPanel Spacing="3" Padding="0,6">
+                    <DataTemplate x:DataType="vm:ImageItemViewModel">
+                        <StackPanel Spacing="3" Padding="0,6" AutomationProperties.Name="{x:Bind DisplayName, Mode=OneWay}">
                             <Grid ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
                                 <Border Width="12" Height="12" CornerRadius="3" VerticalAlignment="Center"
                                         Background="{ThemeResource ControlStrongFillColorDefaultBrush}" />
-                                <TextBlock Grid.Column="1" Text="{x:Bind DisplayName, Mode=OneTime}"
+                                <TextBlock Grid.Column="1" Text="{x:Bind DisplayName, Mode=OneWay}"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                            VerticalAlignment="Center" />
-                                <TextBlock Grid.Column="2" Text="{x:Bind SizeText, Mode=OneTime}"
+                                <TextBlock Grid.Column="2" Text="{x:Bind SizeText, Mode=OneWay}"
                                            VerticalAlignment="Center" />
+
+                                <!-- 删除操作(功能 004 · AC10/AC11) -->
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6"
+                                            VerticalAlignment="Center">
+                                    <ProgressRing Width="16" Height="16" VerticalAlignment="Center"
+                                                  IsActive="{x:Bind IsBusy, Mode=OneWay}"
+                                                  Visibility="{x:Bind IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                                    <Button Padding="10,4" MinWidth="0"
+                                          Content="{x:Bind RemoveLabel, Mode=OneWay}"
+                                          Foreground="{ThemeResource SystemFillColorCriticalBrush}"
+                                          ToolTipService.ToolTip="删除镜像引用 (wslc rmi)"
+                                          IsEnabled="{x:Bind CanRemove, Mode=OneWay}"
+                                          Click="RemoveButton_Click" />
+                                </StackPanel>
                             </Grid>
                             <Grid Margin="20,0,0,0" ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{x:Bind SubtleLine, Mode=OneTime}" FontSize="12"
+                                <TextBlock Text="{x:Bind SubtleLine, Mode=OneWay}" FontSize="12"
                                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                            TextTrimming="CharacterEllipsis" />
-                                <TextBlock Grid.Column="1" Text="{x:Bind UsageText, Mode=OneTime}" FontSize="12"
+                                <!-- 被容器引用时用警示色标出,并说明按钮会变成什么 -->
+                                <TextBlock Grid.Column="1" FontSize="12"
+                                           Text="{x:Bind UsageText, Mode=OneWay}"
+                                           Visibility="{x:Bind IsInUse, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                           Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                <TextBlock Grid.Column="1" FontSize="12"
+                                           Text="{x:Bind UsageText, Mode=OneWay}"
+                                           Visibility="{x:Bind IsInUse, Mode=OneWay, Converter={StaticResource BoolToVis}, ConverterParameter=invert}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                             </Grid>
                         </StackPanel>
@@ -83,14 +157,14 @@
                        Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
         </Grid>
 
-        <!-- 状态栏:刷新时间 + 手动刷新提示(AC12) -->
-        <StackPanel Grid.Row="5" Orientation="Horizontal" Spacing="6" Margin="12,8,12,10">
+        <!-- 状态栏 -->
+        <StackPanel Grid.Row="7" Orientation="Horizontal" Spacing="6" Margin="12,8,12,10">
             <TextBlock FontSize="12"
                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                        Text="{x:Bind ViewModel.LastRefreshedAtText, Mode=OneWay}" />
             <TextBlock FontSize="12"
                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                       Text="· 镜像不会自动变化,需要时点右上角刷新" />
+                       Text="· 镜像不会自动变化,拉取或删除后会自动更新列表" />
         </StackPanel>
     </Grid>
 </Page>

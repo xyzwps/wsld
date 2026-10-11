@@ -111,7 +111,7 @@ public string Containers { get => _containers; set => _containers = value ?? "";
 镜像行直接绑 `ImageInfo`(纯数据,没有通知),MarkupCompile 报
 `WMC1506: OneWay bindings require at least one of their steps to support raising notifications`。
 列表刷新是整体替换 ItemsSource,行内字段根本不需要通知 —— 改成 `Mode=OneTime` 就 0 警告了。
-(如果以后要做行内可变状态,再引入实现 INPC 的行 ViewModel,而不是把警告留着。)
+(功能 004 正是这么做的:引入实现 INPC 的 `ImageItemViewModel` 之后,行内绑定改回 `Mode=OneWay`,依然 0 警告。)
 
 ## 11. 用 UI Automation 验证"点了导航项真的换页了"
 
@@ -127,3 +127,50 @@ $item = $win.FindFirst('Descendants', (New-Object System.Windows.Automation.Prop
 # 关键:NavigationViewItem 不支持 InvokePattern("不支持的模式"),要用 SelectionItemPattern
 ($item.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern)).Select()
 ```
+
+## 12. UI Automation 读 WinUI 3 元素的 `Current.Enabled` 永远是 null
+
+**症状**:自动化脚本里 `if (-not $btn.Current.Enabled) { throw "disabled" }` 无条件抛错,
+看起来像"所有按钮都被禁用了",但界面上明明是亮的。
+
+**根因**:`UIAutomationClient`(WPF 那套托管封装)拿不到 WinUI 3 provider 的 `Enabled` 属性,
+返回默认值;在 PowerShell 里是 `$null`,而 `-not $null` 恒为真。
+
+**修复**:不要用 `Current.Enabled` 判断可用性。要么直接 `InvokePattern.Invoke()`(真禁用会抛异常),
+要么读 `LegacyIAccessiblePattern` 的 State,要么用截图核对。
+
+## 13. `CopyFromScreen` 会抓到 WinUI 的撕裂帧
+
+**症状**:前后两秒的两张截图,一张是 4 行 + "共 4 个镜像",另一张是 1 行 + "共 1 个镜像",
+而 `wslc images` 自始至终都是 4 个 —— 界面上半截和下半截来自不同的渲染帧。
+
+**根因**:WinUI 3 由 DirectComposition 合成,`CopyFromScreen` 抓的是屏幕缓冲,
+可能正好落在组合更新的中间。
+
+**修复**:截图只用来看效果;判断状态一律再用 UIA 读一次文本复核
+(比如 `AutomationId=Message` 那个元素的 Name)。要抓"进行中"的画面就多抓几张挑。
+
+## 14. `DataTemplate` 根元素要显式给 `AutomationProperties.Name`
+
+**症状**:UIA 树里每一行的 Name 都是 `WslcDesktop.Core.ViewModels.ImageItemViewModel`,
+读屏软件念出来全是类名。
+
+**根因**:ListItem 自身没有可读文本时,Name 退化成数据对象的 `ToString()`。
+
+**修复**:模板根元素绑一个真正可读的字段:
+
+```xml
+<StackPanel AutomationProperties.Name="{x:Bind DisplayName, Mode=OneWay}">
+```
+
+## 15. Button 同时绑 `Command` 和 `IsEnabled` 时,命令会改写 IsEnabled
+
+WinUI 的 `ButtonBase` 监听 `ICommand.CanExecuteChanged`,并把结果**直接写进 `IsEnabled` 本地值**,
+这会盖掉 `IsEnabled="{x:Bind ...}"`。所以操作结束时一定要有人调 `NotifyCanExecuteChanged()`,
+否则按钮会卡在禁用态 —— 功能 004 的 `RaiseBusyState()` 就是专门干这个的。
+
+## 16. ContentDialog 的按钮有固定 AutomationId
+
+`PrimaryButton` / `SecondaryButton` / `CloseButton`,自动化脚本可以直接按 ID 点,不必按文案找。
+另外对话框打开时,UIA 树里会多出一个 Name 等于对话框标题的 `ControlType.Window` 元素,
+可以用它判断"框真的弹出来了"。
