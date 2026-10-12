@@ -25,6 +25,8 @@
 - `WslcDesktop.Tests`:xUnit
 
 ## 构建与运行
+装了 [just](https://github.com/casey/just) 的话,仓库根目录的 `justfile` 里有快捷命令:`just dev`(编译并启动应用)、`just test`(单元测试)、`just itest`(真机冒烟)、`just kill` / `just clean`;`just --list` 看全部。
+
 ```powershell
 dotnet build WslcDesktop.sln
 dotnet test  WslcDesktop.sln
