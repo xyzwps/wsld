@@ -1,3 +1,5 @@
+using static WslcDesktop.Core.I18n.Loc;
+
 namespace WslcDesktop.Core.WslcCli;
 
 /// <summary>
@@ -25,9 +27,7 @@ public static class WslcLocator
     }
 
     /// <summary>找不到 wslc.exe 时的友好提示（写入异常消息，供 UI 展示）。</summary>
-    public static string NotFoundMessage() =>
-        $"未找到 wslc.exe。请安装并启用 WSL 3（wslc 组件），" +
-        $"或设置环境变量 {EnvironmentVariable} 指向 wslc.exe 的完整路径。";
+    public static string NotFoundMessage() => Fmt("wslc.not-found", EnvironmentVariable);
 
     private static IEnumerable<string> DefaultLocations()
     {

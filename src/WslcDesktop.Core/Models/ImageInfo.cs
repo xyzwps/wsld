@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json.Serialization;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.Models;
 
@@ -84,7 +85,7 @@ public sealed class ImageInfo
     [JsonIgnore]
     public string DisplayName => IsTagged
         ? (TagText.Length == 0 ? Repository : $"{Repository}:{TagText}")
-        : $"无标签 · {ShortId}";
+        : Fmt("image.untagged", ShortId);
 
     /// <summary>主行右侧的大小文本(AC6)。</summary>
     [JsonIgnore]
@@ -92,12 +93,13 @@ public sealed class ImageInfo
 
     /// <summary>主行右侧的引用情况(AC6)。</summary>
     [JsonIgnore]
-    public string UsageText => IsInUse ? $"被 {ContainerCount} 个容器引用" : "未被容器引用";
+    public string UsageText => IsInUse ? Fmt("image.in-use", ContainerCount) : T("image.not-in-use");
 
     /// <summary>次行:ID、创建时间,存在真实摘要时补一段(AC6)。</summary>
     [JsonIgnore]
     public string SubtleLine =>
-        $"ID {ShortId} · 创建 {CreatedText}" + (IsPlaceholder(Digest) ? "" : $" · 摘要 {Digest.Trim()}");
+        Fmt("image.subtle", ShortId, CreatedText)
+        + (IsPlaceholder(Digest) ? "" : Fmt("image.digest-suffix", Digest.Trim()));
 
     /// <summary>创建时间:优先把 wslc 的原文解析成本地可读时间,失败则退回相对时间或原文(AC6)。</summary>
     [JsonIgnore]

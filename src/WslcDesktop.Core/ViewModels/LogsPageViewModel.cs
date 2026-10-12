@@ -6,6 +6,7 @@ using WslcDesktop.Core.Models;
 using WslcDesktop.Core.Parsing;
 using WslcDesktop.Core.Services;
 using WslcDesktop.Core.WslcCli;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.ViewModels;
 
@@ -26,7 +27,7 @@ public sealed partial class LogsPageViewModel : ObservableObject
     public const int MaxPendingLines = 20_000;
 
     /// <summary>没选容器时点"加载日志"的提示。</summary>
-    public const string NoSourceHint = "请先在上方选择一个容器。";
+    public static string NoSourceHint => T("logs.no-source");
 
     private readonly ContainersService _containers;
     private readonly LogsService _logs;
@@ -83,7 +84,7 @@ public sealed partial class LogsPageViewModel : ObservableObject
     [ObservableProperty] private int _droppedLineCount;
     [ObservableProperty] private string? _error;
     [ObservableProperty] private string? _notice;
-    [ObservableProperty] private string _lastLoadedText = "尚未加载";
+    [ObservableProperty] private string _lastLoadedText = T("logs.not-loaded");
 
     /// <summary>读取失败时展示的错误条(AC6)。</summary>
     public bool HasError => !string.IsNullOrEmpty(Error);
@@ -112,12 +113,12 @@ public sealed partial class LogsPageViewModel : ObservableObject
         get
         {
             var parts = new List<string>();
-            parts.Add(LineCount == 0 ? "0 行" : $"{LineCount} 行");
-            if (DroppedLineCount > 0) parts.Add($"已丢弃最早的 {DroppedLineCount} 行");
-            parts.Add($"最近加载 {LastLoadedText}");
-            if (IsFollowing) parts.Add("跟随中");
-            else if (IsBusy) parts.Add("读取中");
-            else if (!AutoScroll && PendingCount > 0) parts.Add($"已暂停滚动 · 缓冲 {PendingCount} 行");
+            parts.Add(Fmt("logs.lines", LineCount));
+            if (DroppedLineCount > 0) parts.Add(Fmt("logs.dropped", DroppedLineCount));
+            parts.Add(Fmt("logs.last-loaded", LastLoadedText));
+            if (IsFollowing) parts.Add(T("logs.following"));
+            else if (IsBusy) parts.Add(T("logs.reading"));
+            else if (!AutoScroll && PendingCount > 0) parts.Add(Fmt("logs.paused-buffer", PendingCount));
             return string.Join(" · ", parts);
         }
     }
@@ -292,7 +293,7 @@ public sealed partial class LogsPageViewModel : ObservableObject
             LastLoadedText = NowText();
             if (cancelled)
             {
-                Notice = $"已停止跟随 · 共 {LineCount} 行"; // AC8:已显示的日志保留
+                Notice = Fmt("logs.follow-stopped", LineCount); // AC8:已显示的日志保留
             }
             else if (failure is not null)
             {
@@ -300,11 +301,11 @@ public sealed partial class LogsPageViewModel : ObservableObject
             }
             else if (LineCount == 0)
             {
-                Notice = $"容器 {source.DisplayName} 没有输出,跟随已结束(它多半已经停止)。"; // AC10 + AC14
+                Notice = Fmt("logs.follow-empty", source.DisplayName); // AC10 + AC14
             }
             else
             {
-                Notice = $"跟随已结束(容器多半已停止)· 共 {LineCount} 行"; // AC14
+                Notice = Fmt("logs.follow-ended", LineCount); // AC14
             }
         }).ConfigureAwait(false);
     }
@@ -455,7 +456,7 @@ public sealed partial class LogsPageViewModel : ObservableObject
         if (SelectedSource is null)
         {
             ClearDisplay();
-            Notice = "本机还没有容器,先到「容器」页创建一个。";
+            Notice = T("logs.no-containers");
         }
         else if (!ReferenceEquals(SelectedSource, before))
         {
@@ -466,7 +467,7 @@ public sealed partial class LogsPageViewModel : ObservableObject
     }
 
     private static string EmptyNoticeFor(LogSourceOptionViewModel source) =>
-        $"容器 {source.DisplayName} 没有日志输出(可能从未启动,也可能已经停止)。";
+        Fmt("logs.empty-output", source.DisplayName);
 
     private static string NowText() => DateTimeOffset.Now.ToString("HH:mm:ss");
 

@@ -4,8 +4,10 @@ using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
 using WslcDesktop.Core;
+using WslcDesktop.Core.I18n;
 using WslcDesktop.Core.ViewModels;
 using WslcDesktop.Services;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Pages;
 
@@ -26,6 +28,9 @@ public sealed partial class ImagesPage : Page
         ViewModel = new ImagesPageViewModel(
             AppServices.Images,
             new DispatcherUiThread(DispatcherQueue));
+
+        // 静态文案的绑定源:页面 DataContext 指向 Localizer。
+        DataContext = Localizer.Default;
 
         InitializeComponent();
 
@@ -79,10 +84,10 @@ public sealed partial class ImagesPage : Page
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot, // 非打包 WinUI 3 必须显式设置,否则 ShowAsync 抛异常
-            Title = force ? "强制删除镜像" : "删除镜像",
+            Title = T(force ? "dialog.delete-image.force-title" : "dialog.delete-image.title"),
             Content = BuildDeleteMessage(item, force),
-            PrimaryButtonText = force ? "强制删除" : "删除",
-            CloseButtonText = "取消",
+            PrimaryButtonText = T(force ? "action.force-delete" : "action.delete"),
+            CloseButtonText = T("action.cancel"),
             DefaultButton = ContentDialogButton.Close,
         };
 
@@ -96,7 +101,7 @@ public sealed partial class ImagesPage : Page
         var panel = new StackPanel { Spacing = 8 };
         panel.Children.Add(new TextBlock
         {
-            Text = $"确定要删除镜像引用 {item.Reference} 吗?",
+            Text = Fmt("dialog.delete-image.body", item.Reference),
             TextWrapping = TextWrapping.Wrap,
         });
 
@@ -105,7 +110,7 @@ public sealed partial class ImagesPage : Page
             // AC11:强制删除前必须把后果说清楚(实测删除后这些容器再启动会失败)。
             panel.Children.Add(new TextBlock
             {
-                Text = $"该镜像正被 {item.ContainerCount} 个容器引用,强制删除后这些容器将无法再次启动。",
+                Text = Fmt("dialog.delete-image.force-body", item.ContainerCount),
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = (Brush)Application.Current.Resources["SystemFillColorCriticalBrush"],
             });
@@ -114,7 +119,7 @@ public sealed partial class ImagesPage : Page
         {
             panel.Children.Add(new TextBlock
             {
-                Text = $"该镜像正被 {item.ContainerCount} 个容器引用,这样删除会被拒绝,届时可再选择强制删除。",
+                Text = Fmt("dialog.delete-image.in-use", item.ContainerCount),
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
             });
@@ -123,7 +128,7 @@ public sealed partial class ImagesPage : Page
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "如果这个镜像还有其它标签,这一步只会取消当前标签。",
+                Text = T("dialog.delete-image.untagged"),
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = (Brush)Application.Current.Resources["TextFillColorSecondaryBrush"],
             });

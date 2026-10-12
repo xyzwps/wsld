@@ -1,6 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using WslcDesktop.Core.Models;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.Parsing;
 
@@ -16,9 +17,9 @@ public static class WslcJsonParser
         PropertyNameCaseInsensitive = true,
     };
 
-    public static IReadOnlyList<ContainerInfo> ParseContainers(string output) => Parse<ContainerInfo>(output, "容器");
+    public static IReadOnlyList<ContainerInfo> ParseContainers(string output) => Parse<ContainerInfo>(output, T("parser.type.containers"));
 
-    public static IReadOnlyList<ImageInfo> ParseImages(string output) => Parse<ImageInfo>(output, "镜像");
+    public static IReadOnlyList<ImageInfo> ParseImages(string output) => Parse<ImageInfo>(output, T("parser.type.images"));
 
     private static IReadOnlyList<T> Parse<T>(string output, string typeLabel)
         where T : class
@@ -84,7 +85,7 @@ public static class WslcJsonParser
         {
             var snippet = line.Length > 120 ? line[..120] + "…" : line;
             throw new FormatException(
-                $"wslc 输出第 {lineNumber} 行不是有效的{typeLabel} JSON:{ex.Message}(原文片段:{snippet})", ex);
+                Fmt("parser.line-invalid", lineNumber, typeLabel, ex.Message, snippet), ex);
         }
     }
 }

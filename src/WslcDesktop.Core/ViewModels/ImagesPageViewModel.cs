@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using WslcDesktop.Core.Models;
 using WslcDesktop.Core.Services;
 using WslcDesktop.Core.WslcCli;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.ViewModels;
 
@@ -16,10 +17,10 @@ namespace WslcDesktop.Core.ViewModels;
 public sealed partial class ImagesPageViewModel : ObservableObject
 {
     /// <summary>输入为空时的提示(功能 004 · AC2 的界面侧:空引用绝不启动进程)。</summary>
-    public const string EmptyReferenceHint = "请先输入要拉取的镜像引用,例如 docker.1ms.run/library/redis:7。";
+    public static string EmptyReferenceHint => T("images.empty-reference");
 
     /// <summary>常规删除被"正在使用"拒绝后追加的一句(功能 004 · AC10)。</summary>
-    public const string ForceHint = " 该镜像正被容器使用,再点一次「强制删除」才能把它从磁盘上移除。";
+    public static string ForceHint => T("images.force-hint");
 
     private readonly ImagesService _service;
     private readonly IUIThread? _uiThread;
@@ -59,13 +60,13 @@ public sealed partial class ImagesPageViewModel : ObservableObject
     [ObservableProperty] private string? _notice;
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private string _pullText = "";
-    [ObservableProperty] private string _lastRefreshedAtText = "尚未刷新";
+    [ObservableProperty] private string _lastRefreshedAtText = T("refresh.never");
     [ObservableProperty] private bool _isPulling;
 
     /// <summary>汇总行(功能 003 · AC10)。数字来自全量数据,不受搜索过滤影响。</summary>
     public string Summary => TotalCount == 0
-        ? "本机还没有镜像"
-        : $"共 {TotalCount} 个镜像 · {TaggedCount} 个有标签 · {InUseCount} 个正被容器引用";
+        ? T("images.summary.none")
+        : Fmt("images.summary", TotalCount, TaggedCount, InUseCount);
 
     private int TaggedCount => _all.Count(i => i.IsTagged);
 
@@ -82,7 +83,7 @@ public sealed partial class ImagesPageViewModel : ObservableObject
     /// 进度文案(AC7)。实测 `wslc pull` 的输出要等进程结束才一次性冲刷,
     /// 做不出真实百分比,所以这里只报"在做什么 + 已等待几秒",由界面每秒调用 <see cref="Tick"/> 刷新。
     /// </summary>
-    public string BusyText => IsBusy ? $"{_busyTarget} · 已等待 {ElapsedSeconds} 秒" : "";
+    public string BusyText => IsBusy ? Fmt("busy.elapsed", _busyTarget, ElapsedSeconds) : "";
 
     /// <summary>界面计时器驱动:重新求值 <see cref="BusyText"/>(测试里手动调用,不依赖真实时钟)。</summary>
     public void Tick() => OnPropertyChanged(nameof(BusyText));
@@ -173,7 +174,7 @@ public sealed partial class ImagesPageViewModel : ObservableObject
         var cancelled = false;
         Exception? failure = null;
 
-        Begin(item, $"正在拉取 {reference}", pulling: true);
+        Begin(item, Fmt("images.pulling", reference), pulling: true);
         try
         {
             try
@@ -199,7 +200,7 @@ public sealed partial class ImagesPageViewModel : ObservableObject
         if (cancelled)
         {
             // AC6:取消之后不刷新(实测半途终止不会留下不完整的镜像),只说明已取消。
-            await RunOnUiAsync(() => Notice = $"已取消拉取 {reference}").ConfigureAwait(false);
+            await RunOnUiAsync(() => Notice = Fmt("images.pull-cancelled", reference)).ConfigureAwait(false);
             return null;
         }
 
@@ -231,7 +232,7 @@ public sealed partial class ImagesPageViewModel : ObservableObject
         var succeeded = false;
         Exception? failure = null;
 
-        Begin(item, $"正在删除 {reference}", pulling: false);
+        Begin(item, Fmt("images.deleting", reference), pulling: false);
         try
         {
             try
@@ -259,7 +260,7 @@ public sealed partial class ImagesPageViewModel : ObservableObject
             await RunOnUiAsync(() =>
             {
                 item.ForcePending = false;
-                Notice = $"已删除 {reference}";
+                Notice = Fmt("images.deleted", reference);
             }).ConfigureAwait(false);
             await RefreshAsync(cancellationToken).ConfigureAwait(false); // AC8
             return true;

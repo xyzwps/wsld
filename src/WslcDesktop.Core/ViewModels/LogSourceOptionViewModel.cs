@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using WslcDesktop.Core.Models;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.ViewModels;
 
@@ -28,7 +29,7 @@ public sealed class LogSourceOptionViewModel : ObservableObject
 
     public bool IsRunning => _model.IsRunning;
 
-    public string StateText => IsRunning ? "运行中" : "已停止";
+    public string StateText => T(IsRunning ? "state.running" : "state.stopped");
 
     /// <summary>下拉项文案:名称 · 短ID · 状态(AC15)。</summary>
     public string Label => $"{DisplayName} · {ShortId} · {StateText}";

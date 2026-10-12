@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.RegularExpressions;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.Parsing;
 
@@ -16,7 +17,7 @@ public static class WslcLogText
     public const int MaxLineChars = 4_000;
 
     /// <summary>截断标记。</summary>
-    public const string TruncatedSuffix = "…(本行过长,已截断显示)";
+    public static string TruncatedSuffix => T("log.truncated");
 
     private static readonly Regex TimestampPrefix = new(
         @"^(?<ts>\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:?\d{2})) ",

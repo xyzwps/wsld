@@ -1,4 +1,5 @@
 using System.Globalization;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.Models;
 
@@ -30,7 +31,7 @@ public sealed record LogQuery
     /// <summary>界面可选的行数(顺序即下拉顺序,末尾是"全部")。</summary>
     public static IReadOnlyList<int> TailChoices { get; } = [100, 200, 500, 1_000, 2_000, AllLines];
 
-    public const string AllLinesLabel = "全部";
+    public static string AllLinesLabel => T("log.all-lines");
 
     /// <summary>容器标识:名称或 ID 都可以,实测三种写法都返回退出码 0。</summary>
     public string ContainerRef { get; init; } = "";
@@ -46,7 +47,7 @@ public sealed record LogQuery
 
     /// <summary>行数为 0 时表示"全部",界面文案。</summary>
     public static string DescribeTail(int lines) =>
-        lines == AllLines ? AllLinesLabel : string.Format(CultureInfo.InvariantCulture, "最近 {0} 行", lines);
+        lines == AllLines ? AllLinesLabel : Fmt("log.tail-lines", lines);
 
     /// <summary>当前请求的行数文案。</summary>
     public string TailLabel => DescribeTail(TailLines);

@@ -1,3 +1,5 @@
+using static WslcDesktop.Core.I18n.Loc;
+
 namespace WslcDesktop.Core.WslcCli;
 
 /// <summary>
@@ -10,7 +12,7 @@ public static class WslcError
     /// <summary>样板提示的识别片段。</summary>
     public const string BoilerplateMarker = "如果此错误是意外错误";
 
-    public const string FallbackMessage = "wslc 命令执行失败。";
+    public static string FallbackMessage => T("wslc.failed");
 
     public static string Describe(string? stderr)
     {

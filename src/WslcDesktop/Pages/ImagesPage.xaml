@@ -5,6 +5,8 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:vm="using:WslcDesktop.Core.ViewModels"
 >
+    <!-- 功能 009 · AC4/AC5:按钮换成图标,静态文案走 Localizer(页面 DataContext = Localizer.Default)。
+         删除按钮的悬停说明会随"是否已升级为强制删除"变化,那个绑的是行对象上的属性。 -->
     <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto">
 
         <!-- 失败提示(功能 003 · AC7 / 功能 004 · AC9:失败不丢数据) -->
@@ -36,22 +38,24 @@
 
                 <TextBox x:Name="PullBox"
                          Grid.Row="0" Grid.Column="0"
-                         PlaceholderText="镜像引用,例如 docker.1ms.run/library/redis:7"
+                         PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=images.pull.placeholder}"
                          Text="{x:Bind ViewModel.PullText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                          KeyDown="PullBox_KeyDown" />
 
                 <Button Grid.Row="0" Grid.Column="1"
-                        Content="拉取"
-                        MinWidth="72"
-                        ToolTipService.ToolTip="拉取镜像 (wslc pull),也可以直接按回车"
+                        Style="{StaticResource AccentIconButtonStyle}"
+                        Content="&#xE896;"
+                        ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=images.pull.tooltip}"
+                        AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.pull}"
                         Command="{x:Bind ViewModel.PullCommand, Mode=OneTime}"
                         IsEnabled="{x:Bind ViewModel.CanPull, Mode=OneWay}" />
 
                 <Button x:Name="CancelButton"
                         Grid.Row="0" Grid.Column="2"
-                        Content="取消"
-                        MinWidth="60"
-                        ToolTipService.ToolTip="终止正在进行的拉取"
+                        Style="{StaticResource IconOnlyButtonStyle}"
+                        Content="&#xE711;"
+                        ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=images.cancel.tooltip}"
+                        AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.cancel}"
                         Command="{x:Bind ViewModel.CancelPullCommand, Mode=OneTime}"
                         Visibility="{x:Bind ViewModel.IsPulling, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
 
@@ -71,12 +75,17 @@
         <!-- 工具栏(功能 003 · AC12:不自动轮询,只有手动刷新) -->
         <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Padding="12,12,12,0">
             <TextBox x:Name="SearchBox"
-                     PlaceholderText="搜索仓库名 / 标签 / ID"
+                     PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=images.search.placeholder}"
                      Width="280"
                      HorizontalAlignment="Left"
                      VerticalAlignment="Bottom"
                      Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-            <Button Grid.Column="1" Content="刷新" VerticalAlignment="Bottom"
+            <Button Grid.Column="1"
+                    Style="{StaticResource IconOnlyButtonStyle}"
+                    Content="&#xE895;"
+                    VerticalAlignment="Bottom"
+                    ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=images.refresh.tooltip}"
+                    AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.refresh}"
                     Command="{x:Bind ViewModel.RefreshCommand, Mode=OneTime}" />
         </Grid>
 
@@ -114,18 +123,18 @@
                                 <TextBlock Grid.Column="2" Text="{x:Bind SizeText, Mode=OneWay}"
                                            VerticalAlignment="Center" />
 
-                                <!-- 删除操作(功能 004 · AC10/AC11) -->
+                                <!-- 删除操作(功能 004 · AC10/AC11,功能 009 · AC4:图标化) -->
                                 <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6"
                                             VerticalAlignment="Center">
                                     <ProgressRing Width="16" Height="16" VerticalAlignment="Center"
                                                   IsActive="{x:Bind IsBusy, Mode=OneWay}"
                                                   Visibility="{x:Bind IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
-                                    <Button Padding="10,4" MinWidth="0"
-                                          Content="{x:Bind RemoveLabel, Mode=OneWay}"
-                                          Foreground="{ThemeResource SystemFillColorCriticalBrush}"
-                                          ToolTipService.ToolTip="删除镜像引用 (wslc rmi)"
-                                          IsEnabled="{x:Bind CanRemove, Mode=OneWay}"
-                                          Click="RemoveButton_Click" />
+                                    <Button Style="{StaticResource DangerIconButtonStyle}"
+                                            Content="&#xE74D;"
+                                            ToolTipService.ToolTip="{x:Bind RemoveTooltip, Mode=OneWay}"
+                                            AutomationProperties.Name="{x:Bind RemoveLabel, Mode=OneWay}"
+                                            IsEnabled="{x:Bind CanRemove, Mode=OneWay}"
+                                            Click="RemoveButton_Click" />
                                 </StackPanel>
                             </Grid>
                             <Grid Margin="20,0,0,0" ColumnSpacing="8">
@@ -151,7 +160,7 @@
                 </ListView.ItemTemplate>
             </ListView>
             <TextBlock x:Name="EmptyHint"
-                       Text="没有匹配的镜像"
+                       Text="{Binding Converter={StaticResource LocText}, ConverterParameter=images.empty}"
                        HorizontalAlignment="Center" VerticalAlignment="Center"
                        Visibility="Collapsed"
                        Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
@@ -164,7 +173,7 @@
                        Text="{x:Bind ViewModel.LastRefreshedAtText, Mode=OneWay}" />
             <TextBlock FontSize="12"
                        Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                       Text="· 镜像不会自动变化,拉取或删除后会自动更新列表" />
+                       Text="{Binding Converter={StaticResource LocText}, ConverterParameter=images.footer}" />
         </StackPanel>
     </Grid>
 </Page>

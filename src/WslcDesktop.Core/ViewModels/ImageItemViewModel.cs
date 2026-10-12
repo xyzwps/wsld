@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WslcDesktop.Core.Models;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.ViewModels;
 
@@ -47,13 +48,17 @@ public sealed partial class ImageItemViewModel : ObservableObject
     public bool CanRemove => !_owner.IsBusy;
 
     /// <summary>按钮文案:被占用拒绝过一次之后才升级为"强制删除"(AC10)。</summary>
-    public string RemoveLabel => ForcePending ? "强制删除" : "删除";
+    public string RemoveLabel => T(ForcePending ? "image.remove-force-label" : "image.remove-label");
+
+    /// <summary>按钮改成图标之后,悬停说明要跟着状态变(功能 009 · AC4)。</summary>
+    public string RemoveTooltip => T(ForcePending ? "images.delete-force.tooltip" : "images.delete.tooltip");
 
     public IAsyncRelayCommand RemoveCommand => _removeCommand;
 
     partial void OnForcePendingChanged(bool value)
     {
         OnPropertyChanged(nameof(RemoveLabel));
+        OnPropertyChanged(nameof(RemoveTooltip));
     }
 
     /// <summary>由界面层的确认对话框触发;是否强制由这一行自己的状态决定(AC11)。</summary>

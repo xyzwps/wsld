@@ -230,3 +230,63 @@ WinUI 的 `ButtonBase` 监听 `ICommand.CanExecuteChanged`,并把结果**直接�
 
 **修复**:截图前在日志区空白处点一下(把焦点从按钮上移走);
 截图脚本改成按面积挑最大的窗口。
+
+## 22. 带 BOM 的 `settings.json` 会被静默判成"设置被重置"
+
+**症状**:用户在资源管理器里用记事本改过设置文件之后,应用"忘记"了所有设置 ——
+不报错、不提示,只是下次启动又变回"跟随系统"。
+
+**根因**:`SettingsStore.LoadFrom` 外面包了一层 `catch { return new AppSettings(); }`
+(设计如此:设置读坏了不能把应用启动搞崩)。而记事本 / Visual Studio 很可能把文件存成
+**带 BOM 的 UTF-8**,`System.Text.Json` 把 U+FEFF 当非法字符直接抛异常 ——
+于是"一个字符的问题"被兜底 catch 变成"整份设置没了",而且完全看不出来。
+
+**修复**:读取时 `File.ReadAllText(path).TrimStart('\uFEFF')`。
+测试 `Utf8BomPrefixedFile_IsStillRead` 钉住这条。顺带提醒:凡是"读失败就退回默认值"的地方,
+默认值本身要无害,而且最好只兜底**读**,不要顺手把写失败也一起吞成"成功"。
+
+## 23. `ComboBox` 的 UIA 矩形把"下拉的占位"一起算进去了
+
+**症状**:想确认"工具栏下拉到底要多宽",用 UIA 量 `ComboBox.Current.BoundingRectangle`,
+固定 `Width="150"` 之后量出来还是 237×95 —— 看起来像"宽度没生效",于是得出
+"它会按最长条目要 220+ 宽,把右边的开关挤出窗口"的错误结论。
+
+**真相**:同一个控件,去掉固定宽度后 UIA 报 169×95(英文)/ 196×95(中文),
+而截图上闭合的下拉框明显就是 150 DIP。也就是说 **UIA 那个矩形 = 控件本体 ∪ 下拉展开时的占位**,
+高度 95 也远超"表头 + 32 高的框"。按它判断布局会一路判断错。
+
+**约定**:量宽度要么看闭合状态的截图,要么量 `ContentPresenter` 那一层;
+下拉固定宽度(`Width="150"`)的真正理由是**中英切换时工具栏宽度不跳**、
+以及"最长条目一定放得下"(实测中文最长"最近 1000 行"、英文"1000 lines"),
+不是"不固定就会溢出"。
+
+另外两个连带结论:
+
+- `string.Format(InvariantCulture, "{0}", 1000)` 出来是 `1000`,**不带千分位**(默认 G 格式),
+  所以条目文案比预想的短,别按"1,000"去估宽度;
+- 真要把一行塞满,`ToggleSwitch` 的默认 `MinWidth=154` 才是主要杀手(见 #18)。
+
+## 24. `Platforms=x64` 会留下两份输出目录,自动化极易测到旧 exe
+
+**症状**:改了 XAML、`dotnet build` 成功、截图却纹丝不动,像是"改动没生效"。
+
+**根因**:项目里写了 `Platforms=x64`,**通过解决方案构建**时输出落在
+`src\WslcDesktop\bin\x64\Debug\net9.0-windows10.0.19041.0\win-x64\`,
+而**直接构建单个项目 / 历史遗留**的 `bin\Debug\...` 也还在那儿放着上一次的 exe。
+两份并存,`Get-ChildItem -Recurse -Filter WslcDesktop.exe` 会一次返回两个。
+
+**修复**:脚本里一律 `Sort-Object LastWriteTime -Descending | Select-Object -First 1`,
+并且把选中的路径和时间打印出来。更稳的做法是构建前先删掉旧输出,或者干脆只走解决方案构建。
+另外:构建前必须先杀进程,否则文件被占用导致构建失败,而失败信息容易被误读成"代码有问题"。
+
+## 25. 截窗口要用 DWM 扩展帧边界,而且还要再 inset 2px
+
+**症状**:截图四边混进了一条背后的窗口内容(桌面 / 别的程序),看起来像"没截全"或"多了一圈"。
+
+**根因**:`GetWindowRect` 返回的矩形包含 Win11 那圈**不可见边框**(阴影 + 调整大小的热区);
+`DwmGetWindowAttribute(DWMWA_EXTENDED_FRAME_BOUNDS)` 才是屏幕上真正看到的窗口范围 ——
+但它外面**还包着约 2px 的不可见热区**,直接用同样会漏进来。
+
+**修复**:`tools/win32-cap.cs` 导出 `DwmGetWindowAttribute` + `DWMWA_EXTENDED_FRAME_BOUNDS`,
+`tools/capture-window.ps1` 优先用 DWM 边界,拿到后四边各 inset 2px,拿不到才退回 `GetWindowRect`。
+配合 #21(按面积挑最大窗口 + 截图前把焦点从按钮上移开)才能稳定出干净截图。

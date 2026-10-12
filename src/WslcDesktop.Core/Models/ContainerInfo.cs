@@ -1,5 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.Models;
 
@@ -49,7 +50,7 @@ public sealed class ContainerInfo
     public string ImageLine => $"{Image}  ·  {Command}";
 
     [JsonIgnore]
-    public string SubtleLine => $"状态 {State} · ID {ShortId} · 网络 {DashIfEmpty(Networks)} · 端口 {DashIfEmpty(Ports)}";
+    public string SubtleLine => Fmt("container.subtle", State, ShortId, DashIfEmpty(Networks), DashIfEmpty(Ports));
 
     private static string DashIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 }

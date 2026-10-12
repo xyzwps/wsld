@@ -1,3 +1,5 @@
+using static WslcDesktop.Core.I18n.Loc;
+
 namespace WslcDesktop.Core.Models;
 
 /// <summary>
@@ -8,5 +10,5 @@ namespace WslcDesktop.Core.Models;
 public sealed record PullResult(string Reference, bool IsUpToDate, string StatusLine)
 {
     /// <summary>界面提示文案(功能 004 · AC8)。放在 Core 里是为了让文案也能被单测覆盖。</summary>
-    public string Notice => IsUpToDate ? $"{Reference} 已是最新" : $"已拉取 {Reference}";
+    public string Notice => IsUpToDate ? Fmt("pull.uptodate", Reference) : Fmt("pull.done", Reference);
 }

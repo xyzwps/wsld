@@ -1,7 +1,9 @@
 using System.IO;
 using Microsoft.UI.Xaml;
 using WslcDesktop.Converters;
+using WslcDesktop.Core.I18n;
 using WslcDesktop.Pages;
+using WslcDesktop.Services;
 
 namespace WslcDesktop;
 
@@ -36,6 +38,10 @@ public partial class App : Application
 
         // 在代码中注册转换器,避免 XAML 直接引用当前程序集类型。
         Resources["BoolToVis"] = new BoolToVisibilityConverter();
+        Resources["LocText"] = new LocalizationConverter();
+
+        // 功能 009:读设置(主题 + 语言)并落到 Localizer,窗口照着它长出来。
+        AppState.Initialize();
 
         _window = new MainWindow();
         _window.Activate();

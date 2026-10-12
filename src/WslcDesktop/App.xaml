@@ -3,11 +3,58 @@
     x:Class="WslcDesktop.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <!-- 功能 009 · AC4:图标按钮的统一样式。
+         这里只放"静态样式",用 XAML 标记写(InitializeComponent 解析)是安全的;
+         真正在运行时往 Application.Resources 里塞东西必须放在 OnLaunched,见 dev-notes §1。 -->
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <XamlControlsResources xmlns="using:Microsoft.UI.Xaml.Controls" />
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- 图标一律用这套码点(功能 009 · AC4) -->
+            <FontFamily x:Key="IconFont">Segoe MDL2 Assets</FontFamily>
+            <x:Double x:Key="IconFontSize">15</x:Double>
+
+            <!-- 工具栏/列表行里的纯图标按钮 -->
+            <Style x:Key="IconOnlyButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+                <Setter Property="FontSize" Value="{StaticResource IconFontSize}" />
+                <Setter Property="Padding" Value="7,4" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="MinHeight" Value="32" />
+            </Style>
+
+            <!-- 主操作(加载日志)用的强调色图标按钮 -->
+            <Style x:Key="AccentIconButtonStyle" TargetType="Button" BasedOn="{StaticResource AccentButtonStyle}">
+                <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+                <Setter Property="FontSize" Value="{StaticResource IconFontSize}" />
+                <Setter Property="Padding" Value="9,4" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="MinHeight" Value="32" />
+            </Style>
+
+            <!-- 破坏性操作(删除):红色图标,和普通按钮同尺寸 -->
+            <Style x:Key="DangerIconButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+                <Setter Property="FontSize" Value="{StaticResource IconFontSize}" />
+                <Setter Property="Padding" Value="7,4" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="MinHeight" Value="32" />
+                <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+            </Style>
+
+            <!-- 自定义标题栏里的扁平按钮:常态无底色,悬停才浮出浅色 -->
+            <Style x:Key="TitleBarIconButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
+                <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+                <Setter Property="FontSize" Value="{StaticResource IconFontSize}" />
+                <Setter Property="Width" Value="34" />
+                <Setter Property="Height" Value="30" />
+                <Setter Property="Padding" Value="0" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="MinHeight" Value="0" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+            </Style>
         </ResourceDictionary>
     </Application.Resources>
 </Application>

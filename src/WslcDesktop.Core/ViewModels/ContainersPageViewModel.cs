@@ -4,6 +4,7 @@ using CommunityToolkit.Mvvm.Input;
 using WslcDesktop.Core.Models;
 using WslcDesktop.Core.Services;
 using WslcDesktop.Core.WslcCli;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.ViewModels;
 
@@ -40,14 +41,14 @@ public sealed partial class ContainersPageViewModel : ObservableObject
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private bool _showStopped = true;
     [ObservableProperty] private int _autoRefreshSeconds = 5;
-    [ObservableProperty] private string _lastRefreshedAtText = "尚未刷新";
+    [ObservableProperty] private string _lastRefreshedAtText = T("refresh.never");
 
     /// <summary>是否有生命周期操作正在进行(功能 002 · AC5)。用字段而非自动属性,避免通知风暴。</summary>
     public bool IsBusy => Volatile.Read(ref _operationActive) != 0;
 
     private int _operationActive;
 
-    public string Summary => $"共 {TotalCount} 个容器 · {RunningCount} 个运行中";
+    public string Summary => Fmt("containers.summary", TotalCount, RunningCount);
 
     partial void OnTotalCountChanged(int value) => OnPropertyChanged(nameof(Summary));
     partial void OnRunningCountChanged(int value) => OnPropertyChanged(nameof(Summary));

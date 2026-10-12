@@ -4,8 +4,10 @@ using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using WslcDesktop.Core;
+using WslcDesktop.Core.I18n;
 using WslcDesktop.Core.ViewModels;
 using WslcDesktop.Services;
+using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Pages;
 
@@ -23,9 +25,12 @@ public sealed partial class ContainersPage : Page
             AppServices.Containers,
             new DispatcherUiThread(DispatcherQueue));
 
+        // 静态文案的绑定源:页面 DataContext 指向 Localizer,语言一变文案跟着变。
+        DataContext = Localizer.Default;
+
         InitializeComponent();
 
-        IntervalBox.SelectedIndex = 2; // 默认 5 秒,与 ViewModel 默认值一致
+        PopulateIntervalBox();
         ViewModel.Items.CollectionChanged += (_, _) => UpdateEmptyHint();
         UpdateEmptyHint();
 
@@ -45,10 +50,10 @@ public sealed partial class ContainersPage : Page
         var dialog = new ContentDialog
         {
             XamlRoot = XamlRoot, // 非打包 WinUI 3 必须显式设置,否则 ShowAsync 抛异常
-            Title = "删除容器",
+            Title = T("dialog.delete-container.title"),
             Content = BuildDeleteMessage(item.DisplayName, running),
-            PrimaryButtonText = "删除",
-            CloseButtonText = "取消",
+            PrimaryButtonText = T("action.delete"),
+            CloseButtonText = T("action.cancel"),
             DefaultButton = ContentDialogButton.Close,
         };
 
@@ -62,20 +67,39 @@ public sealed partial class ContainersPage : Page
         var panel = new StackPanel { Spacing = 8 };
         panel.Children.Add(new TextBlock
         {
-            Text = $"确定要删除容器 {name} 吗?此操作不可恢复。",
+            Text = Fmt("dialog.delete-container.body", name),
             TextWrapping = TextWrapping.Wrap,
         });
         if (running)
         {
             panel.Children.Add(new TextBlock
             {
-                Text = "该容器正在运行,将强制停止并删除(wslc remove -f)。",
+                Text = T("dialog.delete-container.running"),
                 TextWrapping = TextWrapping.Wrap,
                 Foreground = (Microsoft.UI.Xaml.Media.Brush)
                     Microsoft.UI.Xaml.Application.Current.Resources["SystemFillColorCriticalBrush"],
             });
         }
         return panel;
+    }
+
+    /// <summary>
+    /// 自动生成刷新的下拉项。语言在构造时已经定好(换语言会整页重建),
+    /// 所以这里直接取当前文案即可;Tag 存秒数,选中后交回 ViewModel。
+    /// </summary>
+    private void PopulateIntervalBox()
+    {
+        IntervalBox.Items.Add(new ComboBoxItem { Tag = "0", Content = T("interval.off") });
+        foreach (var seconds in new[] { 2, 5, 10, 30 })
+        {
+            IntervalBox.Items.Add(new ComboBoxItem
+            {
+                Tag = seconds.ToString(CultureInfo.InvariantCulture),
+                Content = Fmt("interval.seconds", seconds),
+            });
+        }
+
+        IntervalBox.SelectedIndex = 2; // 默认 5 秒,与 ViewModel 默认值一致
     }
 
     private void UpdateEmptyHint()

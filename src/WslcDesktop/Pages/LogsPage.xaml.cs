@@ -4,6 +4,7 @@ using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using WslcDesktop.Core;
+using WslcDesktop.Core.I18n;
 using WslcDesktop.Core.ViewModels;
 using WslcDesktop.Services;
 
@@ -28,6 +29,9 @@ public sealed partial class LogsPage : Page
             AppServices.Containers,
             AppServices.Logs,
             new DispatcherUiThread(DispatcherQueue));
+
+        // 静态文案的绑定源:页面 DataContext 指向 Localizer。
+        DataContext = Localizer.Default;
 
         InitializeComponent();
 
