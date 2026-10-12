@@ -23,6 +23,11 @@
                     <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE8F1;" />
                 </NavigationViewItem.Icon>
             </NavigationViewItem>
+            <NavigationViewItem Content="日志" Tag="logs">
+                <NavigationViewItem.Icon>
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE7C3;" />
+                </NavigationViewItem.Icon>
+            </NavigationViewItem>
         </NavigationView.MenuItems>
         <Grid x:Name="PageHost" />
     </NavigationView>

@@ -71,6 +71,9 @@ public class ImagesServiceTests
 
     private sealed class CancelledCli : IWslcCli
     {
+        public Task<WslcCliResult> RunLinesAsync(IReadOnlyList<string> arguments, Action<string>? onStdoutLine, CancellationToken cancellationToken = default) =>
+            RunAsync(arguments, cancellationToken);
+
         public Task<WslcCliResult> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
         {
             cancellationToken.ThrowIfCancellationRequested();

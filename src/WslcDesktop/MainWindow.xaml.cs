@@ -50,6 +50,7 @@ public sealed partial class MainWindow : Window
     private static Page CreatePage(string key) => key switch
     {
         "images" => new ImagesPage(),
+        "logs" => new LogsPage(),
         _ => new ContainersPage(),
     };
 

@@ -240,6 +240,9 @@ public class ContainerActionsViewModelTests
 
         public List<IReadOnlyList<string>> Calls { get; } = new();
 
+        public Task<WslcCliResult> RunLinesAsync(IReadOnlyList<string> arguments, Action<string>? onStdoutLine, CancellationToken cancellationToken = default) =>
+            RunAsync(arguments, cancellationToken);
+
         public Task<WslcCliResult> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
         {
             Calls.Add(arguments);

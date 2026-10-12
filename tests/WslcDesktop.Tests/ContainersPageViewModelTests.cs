@@ -141,6 +141,9 @@ public class ContainersPageViewModelTests
         private readonly TaskCompletionSource _gate = new(TaskCreationOptions.RunContinuationsAsynchronously);
         public int StartedCalls;
 
+        public Task<WslcCliResult> RunLinesAsync(IReadOnlyList<string> arguments, Action<string>? onStdoutLine, CancellationToken cancellationToken = default) =>
+            RunAsync(arguments, cancellationToken);
+
         public async Task<WslcCliResult> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
         {
             StartedCalls++;

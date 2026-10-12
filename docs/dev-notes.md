@@ -174,3 +174,59 @@ WinUI 的 `ButtonBase` 监听 `ICommand.CanExecuteChanged`,并把结果**直接�
 `PrimaryButton` / `SecondaryButton` / `CloseButton`,自动化脚本可以直接按 ID 点,不必按文案找。
 另外对话框打开时,UIA 树里会多出一个 Name 等于对话框标题的 `ControlType.Window` 元素,
 可以用它判断"框真的弹出来了"。
+## 17. 取消跟随:`wslc` 被终止后会以退出码 -1 自己退场
+
+**症状**:点"停止跟随"有时弹红色错误条,而不是预期的"已停止跟随 · 共 N 行"。
+
+**根因**:`Kill(entireProcessTree: true)` 和 `WaitForExit()` 在赛跑。被终止的 `wslc`
+经常先带着退出码 `-1`(它自己的"我被终止了")退场,`ProcessWslcCli` 于是把这次调用
+判成"命令失败"抛 `WslcCliException`,而取消信号是之后才被看到的。
+
+**修复**:在 `RunAsync` 返回前、`RunLinesAsync` 的 `WaitForExit()` 之后各补一次
+`cancellationToken.ThrowIfCancellationRequested()`;catch 里若令牌已经触发,
+一律改抛 `OperationCanceledException`。**取消就是取消,不能报成失败。**
+
+## 18. WinUI 3 没有 `WrapPanel`,工具栏防裁切只能靠"可伸缩列"
+
+**症状**:日志页工具栏在 1180 宽窗口下,"自动滚动"和"停止跟随"被右边缘切掉。
+
+**根因**:①WinUI 3(Windows App SDK 2.5)根本没有 `WrapPanel` / `WrapLayout`
+(反射查 `Microsoft.WinUI.dll`,带 Wrap 的只有 `ItemsWrapGrid`/`VariableSizedWrapGrid`/`WrapGrid`);
+②放在 `Auto` 列里的 `ComboBox` 会按**最长条目**算自己要多宽,把右边的按钮整组顶出可视区。
+
+**修复**:定下布局约定 —— 动作按钮一律 `Auto` 列(永远保住自己的宽度),
+会变长的下拉放 `*` 列 + `MaxWidth`(窄窗口先压缩它,文字截断就行)。
+另外 `ToggleSwitch` 默认 `MinWidth=154`,开关两侧文案相同时直接设 0,一行能多塞两个开关。
+
+## 19. 攒批上屏会把慢速日志"憋死"
+
+**症状**:真机上勾"实时跟随",容器每秒打印 1 行,8 秒后界面还停在"200 行";
+点停止才一次跳到 208 行。看起来完全像跟随没生效。
+
+**根因**:`EnqueueLine` 只在缓冲攒够 64 行时才催一次上屏(防高频重绘),慢速容器永远攒不满阈值,
+而"跟随结束"才是唯一的兜底上屏时机。
+
+**修复**:页面在 `IsFollowing` 为真期间挂一个 500ms 的 `DispatcherQueueTimer` 催屏,
+跟随结束或页面卸载立刻停,不空转。VM 侧契约用
+`DrainPending_AppliesEvenASingleLine` 钉住:哪怕只有 1 行缓冲也要能上屏。
+
+## 20. 跟随期间状态栏的"最近加载"停在旧时刻
+
+**症状**:"206 行 · 最近加载 20:16:50 · 跟随中" —— 行数在涨、时间不动,
+读起来像"20:16:50 之后就再没有新日志"。
+
+**根因**:`LastLoadedText` 只在一次性读取完成、以及跟随结束时赋值。
+
+**修复**:`AppendToDisplay` 里如果 `IsFollowing` 为真,顺带把它推到当下(一次性读取路径不受影响)。
+
+## 21. 截图会被"焦点 ToolTip"以及它自己的顶层窗口污染
+
+**症状**:①截图右上角莫名多出气泡"wslc logs(按下方选项拼参数)",把鼠标移开也不消失;
+②`tools/capture-window.ps1` 输出 `captured 317x64`,截到的是个小窗口。
+
+**根因**:①UIA 的 `InvokePattern.Invoke()` 会把键盘焦点留在按钮上,WinUI 随即弹出它的 ToolTip,
+这是焦点触发的、不随鼠标移动消失;②ToolTip 是**同进程的独立顶层窗口**,
+`EnumWindows` 遍历到的第一个窗口很可能就是它,而脚本用的是 `$found[0]`。
+
+**修复**:截图前在日志区空白处点一下(把焦点从按钮上移走);
+截图脚本改成按面积挑最大的窗口。

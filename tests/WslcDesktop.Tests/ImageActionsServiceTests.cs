@@ -235,6 +235,9 @@ public class ImageActionsServiceTests
     {
         public IReadOnlyList<string>? LastArguments { get; private set; }
 
+        public Task<WslcCliResult> RunLinesAsync(IReadOnlyList<string> arguments, Action<string>? onStdoutLine, CancellationToken cancellationToken = default) =>
+            RunAsync(arguments, cancellationToken);
+
         public Task<WslcCliResult> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
         {
             LastArguments = arguments;
