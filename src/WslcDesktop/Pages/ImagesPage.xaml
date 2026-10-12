@@ -33,7 +33,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1">
-            <Grid RowDefinitions="Auto,Auto" ColumnDefinitions="*,Auto,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto"
                   ColumnSpacing="8" RowSpacing="8">
 
                 <TextBox x:Name="PullBox"
@@ -69,6 +69,13 @@
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Text="{x:Bind ViewModel.BusyText, Mode=OneWay}" />
                 </StackPanel>
+
+                <!-- 镜像源预览(功能 010 · AC4):只有真的改写了引用才占这一行 -->
+                <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                           FontSize="12" TextWrapping="Wrap"
+                           Visibility="{x:Bind ViewModel.HasPullMirrorHint, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                           Text="{x:Bind ViewModel.PullMirrorHint, Mode=OneWay}" />
             </Grid>
         </Border>
 

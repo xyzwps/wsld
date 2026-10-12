@@ -6,7 +6,7 @@ namespace WslcDesktop.Core.Services;
 
 /// <summary>
 /// 镜像相关的 wslc 调用。
-/// 功能 003:列表查询;功能 004:拉取与删除。
+/// 功能 003:列表查询;功能 004:拉取与删除;功能 010:打标签(镜像源改名)。
 /// </summary>
 public sealed class ImagesService
 {
@@ -35,6 +35,7 @@ public sealed class ImagesService
     /// <summary>
     /// 拉取镜像,对应 `wslc pull &lt;引用&gt;`(功能 004 · AC1)。
     /// 不用 `-q`:实测详细输出的 `Status:` 行能区分"新下载"和"已是最新"。
+    /// 传给这里的引用就是要拉的那个 —— 镜像源改写(功能 010)发生在上层,服务层不掺逻辑。
     /// </summary>
     public async Task<PullResult> PullAsync(string reference, CancellationToken cancellationToken = default)
     {
@@ -45,6 +46,22 @@ public sealed class ImagesService
             throw new WslcCliException("wslc pull", result);
         }
         return WslcPullLog.Parse(target, result.StdOut);
+    }
+
+    /// <summary>
+    /// 给已有镜像补一个标签,对应 `wslc tag &lt;源引用&gt; &lt;目标引用&gt;`(功能 010 · AC5)。
+    /// 实测退出码 0、无任何输出;源与目标都先校验非空,再启动进程。
+    /// </summary>
+    public async Task TagAsync(string source, string target, CancellationToken cancellationToken = default)
+    {
+        var from = RequireReference(source);
+        var to = RequireReference(target);
+
+        var result = await _cli.RunAsync(new[] { "tag", from, to }, cancellationToken).ConfigureAwait(false);
+        if (result.ExitCode != 0)
+        {
+            throw new WslcCliException("wslc tag", result);
+        }
     }
 
     /// <summary>

@@ -12,7 +12,7 @@ using static WslcDesktop.Core.I18n.Loc;
 namespace WslcDesktop.Pages;
 
 /// <summary>
-/// 镜像页(功能 003:列表;功能 004:拉取与删除)。
+/// 镜像页(功能 003:列表;功能 004:拉取与删除;功能 010:镜像源预览)。
 /// 页面只做呈现与交互约定:回车即拉取、删除前先弹确认框、被占用时把按钮文案交给 Core 决定。
 /// 命令拼装、互斥、强制删除策略、错误清洗都在 Core 的 ImagesPageViewModel 里。
 /// 与容器页一样不启动自动刷新(功能 003 · AC12)。
@@ -27,7 +27,8 @@ public sealed partial class ImagesPage : Page
     {
         ViewModel = new ImagesPageViewModel(
             AppServices.Images,
-            new DispatcherUiThread(DispatcherQueue));
+            new DispatcherUiThread(DispatcherQueue),
+            AppState.Current); // 功能 010:共用同一份设置,镜像源改完这边立刻能读到
 
         // 静态文案的绑定源:页面 DataContext 指向 Localizer。
         DataContext = Localizer.Default;
@@ -58,6 +59,8 @@ public sealed partial class ImagesPage : Page
 
         Loaded += (_, _) =>
         {
+            // 页面是缓存的,镜像源可能在别的页面上被改过,回到这一页时把预览文案重算一次。
+            ViewModel.RefreshMirrorState();
             if (ViewModel.IsBusy) _tickTimer.Start();
         };
         Unloaded += (_, _) => _tickTimer.Stop();

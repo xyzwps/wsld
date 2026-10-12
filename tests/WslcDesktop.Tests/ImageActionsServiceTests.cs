@@ -230,6 +230,79 @@ public class ImageActionsServiceTests
         Assert.Equal(new[] { "rmi", "-f", BusyBoxRef }, cli.LastArguments);
     }
 
+    // ---------- 功能 010 · AC5 · 打标签(镜像源改名) ----------
+
+    private const string MirrorRef = "docker.1ms.run/library/redis:7";
+    private const string PlainRef = "redis:7";
+
+    /// <summary>实测:`wslc tag <源> <目标>` 退出码 0、没有任何输出。</summary>
+    [Fact]
+    public async Task TagAsync_InvokesWslcTagWithSourceAndTarget()
+    {
+        var cli = new FakeWslcCli().Enqueue(0, "");
+        var service = new ImagesService(cli);
+
+        await service.TagAsync(MirrorRef, PlainRef);
+
+        var args = Assert.Single(cli.Calls);
+        Assert.Equal(new[] { "tag", MirrorRef, PlainRef }, args);
+    }
+
+    [Fact]
+    public async Task TagAsync_TrimsBothReferences()
+    {
+        var cli = new FakeWslcCli().Enqueue(0);
+        var service = new ImagesService(cli);
+
+        await service.TagAsync($"  {MirrorRef}\t", $" {PlainRef} ");
+
+        Assert.Equal(new[] { "tag", MirrorRef, PlainRef }, Assert.Single(cli.Calls));
+    }
+
+    [Fact]
+    public async Task TagAsync_EmptySource_ThrowsWithoutStartingProcess()
+    {
+        var cli = new FakeWslcCli();
+        var service = new ImagesService(cli);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.TagAsync("   ", PlainRef));
+        Assert.Empty(cli.Calls);   // AC2 同一条规矩:空引用绝不启动进程
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task TagAsync_EmptyTarget_ThrowsWithoutStartingProcess(string? target)
+    {
+        var cli = new FakeWslcCli();
+        var service = new ImagesService(cli);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.TagAsync(MirrorRef, target!));
+        Assert.Empty(cli.Calls);
+    }
+
+    [Fact]
+    public async Task TagAsync_NonZeroExit_ThrowsWithTagCommandAndErrorText()
+    {
+        var cli = new FakeWslcCli().Enqueue(1, "", NotFoundStdErr);
+        var service = new ImagesService(cli);
+
+        var ex = await Assert.ThrowsAsync<WslcCliException>(() => service.TagAsync(MirrorRef, PlainRef));
+
+        Assert.Equal("wslc tag", ex.Command);
+        Assert.Contains("WSLC_E_IMAGE_NOT_FOUND", ex.Message);
+    }
+
+    [Fact]
+    public async Task TagAsync_Cancellation_IsPropagated()
+    {
+        var cli = new CancellingCli();
+        var service = new ImagesService(cli);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.TagAsync(MirrorRef, PlainRef));
+        Assert.Equal(new[] { "tag", MirrorRef, PlainRef }, cli.LastArguments);
+    }
     /// <summary>模拟进程已经启动、但中途被取消(AC6 里取消拉取的底层形态)。</summary>
     private sealed class CancellingCli : IWslcCli
     {

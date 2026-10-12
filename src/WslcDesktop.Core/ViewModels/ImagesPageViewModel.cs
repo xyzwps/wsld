@@ -3,6 +3,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WslcDesktop.Core.Models;
 using WslcDesktop.Core.Services;
+using WslcDesktop.Core.Settings;
 using WslcDesktop.Core.WslcCli;
 using static WslcDesktop.Core.I18n.Loc;
 
@@ -13,6 +14,7 @@ namespace WslcDesktop.Core.ViewModels;
 /// 功能 003:启动即加载、搜索过滤、排序、汇总、手动刷新(不轮询)。
 /// 功能 004:拉取(可取消)与删除(被占用时二次确认升级为强制删除),
 /// 全局单操作互斥,成功后刷新一次并给出提示。
+/// 功能 010:启用了镜像源(registry mirror)时,拉取前先改写引用,拉完再把镜像改名回用户输入的名字。
 /// </summary>
 public sealed partial class ImagesPageViewModel : ObservableObject
 {
@@ -33,10 +35,11 @@ public sealed partial class ImagesPageViewModel : ObservableObject
     private string _busyTarget = "";
     private DateTimeOffset _busyStartedAt;
 
-    public ImagesPageViewModel(ImagesService service, IUIThread? uiThread = null)
+    public ImagesPageViewModel(ImagesService service, IUIThread? uiThread = null, AppSettings? settings = null)
     {
         _service = service;
         _uiThread = uiThread;
+        Settings = settings ?? new AppSettings();
         RefreshCommand = new AsyncRelayCommand(() => RefreshAsync(CancellationToken.None, clearNotice: true));
         PullCommand = new AsyncRelayCommand(() => PullAsync(), () => CanPull);
         CancelPullCommand = new RelayCommand(CancelPull, () => IsPulling);
@@ -44,6 +47,12 @@ public sealed partial class ImagesPageViewModel : ObservableObject
     }
 
     public ObservableCollection<ImageItemViewModel> Items { get; } = new();
+
+    /// <summary>
+    /// 应用设置(功能 010 · AC1)。界面传进来的是 <c>AppState.Current</c> 同一个实例,
+    /// 所以设置页改完镜像源,这一页不用重建就能读到新值(说明文案靠 <see cref="RefreshMirrorState"/> 重算)。
+    /// </summary>
+    public AppSettings Settings { get; }
 
     public IAsyncRelayCommand RefreshCommand { get; }
 
@@ -100,6 +109,31 @@ public sealed partial class ImagesPageViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(CanPull));
         PullCommand.NotifyCanExecuteChanged();
+        RefreshMirrorState(); // 功能 010 · AC4:改写预览跟着输入走
+    }
+
+    /// <summary>启用镜像源后,这个引用才是真正交给 wslc pull 的(功能 010 · AC2/AC3)。</summary>
+    public string EffectivePullReference => RegistryMirrorPolicy.Rewrite(PullText.Trim(), Settings.RegistryMirror).Reference;
+
+    /// <summary>输入框下方那行"实际会拉 …"的说明;没发生改写时是空串(功能 010 · AC4)。</summary>
+    public string PullMirrorHint
+    {
+        get
+        {
+            var rewrite = RegistryMirrorPolicy.Rewrite(PullText.Trim(), Settings.RegistryMirror);
+            return rewrite.Rewritten ? Fmt("images.pull.via-mirror", rewrite.Reference) : "";
+        }
+    }
+
+    /// <summary>有没有那行说明(界面用它决定要不要留出这一行)。</summary>
+    public bool HasPullMirrorHint => PullMirrorHint.Length > 0;
+
+    /// <summary>镜像源设置变了(或页面刚显示)时重算预览文案;设置页与镜像页共用同一份 AppSettings。</summary>
+    public void RefreshMirrorState()
+    {
+        OnPropertyChanged(nameof(EffectivePullReference));
+        OnPropertyChanged(nameof(PullMirrorHint));
+        OnPropertyChanged(nameof(HasPullMirrorHint));
     }
 
     partial void OnIsPullingChanged(bool value) => CancelPullCommand.NotifyCanExecuteChanged();
@@ -148,7 +182,8 @@ public sealed partial class ImagesPageViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 拉取一个镜像引用(功能 004 · AC1/AC5/AC6/AC8/AC9)。
+    /// 拉取一个镜像引用(功能 004 · AC1/AC5/AC6/AC8/AC9,功能 010 · AC2/AC3/AC5)。
+    /// 输入框里是用户写的名字;启用镜像源时真正拉的是改写后的引用,成功后按设置改回这个名字。
     /// 返回 null 表示这次没成:输入为空、已有操作在跑、被取消或失败,原因已写进 Error/Notice。
     /// </summary>
     public async Task<PullResult?> PullAsync(CancellationToken cancellationToken = default)
@@ -167,19 +202,32 @@ public sealed partial class ImagesPageViewModel : ObservableObject
 
         if (Interlocked.CompareExchange(ref _operationActive, 1, 0) != 0) return null; // AC5
 
+        // 功能 010 · AC2/AC3:启用了镜像源,Docker Hub 的引用在这里被改写成镜像站地址。
+        var rewrite = RegistryMirrorPolicy.Rewrite(reference, Settings.RegistryMirror);
+        var effective = rewrite.Reference;
+
         var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
         _pullCts = cts;
         var item = FindItem(reference);
         PullResult? outcome = null;
         var cancelled = false;
+        string? renameFailure = null;
         Exception? failure = null;
 
-        Begin(item, Fmt("images.pulling", reference), pulling: true);
+        Begin(item, Fmt("images.pulling", effective), pulling: true);
         try
         {
             try
             {
-                outcome = await _service.PullAsync(reference, cts.Token).ConfigureAwait(false);
+                outcome = await _service.PullAsync(effective, cts.Token).ConfigureAwait(false);
+
+                // 功能 010 · AC5:改名属于同一次拉取操作的收尾,不放开全局互斥,免得中途被删除/刷新插队。
+                if (rewrite.Rewritten && Settings.RenameMirrorPull && !cts.IsCancellationRequested)
+                {
+                    var rename = await RenameAfterMirrorAsync(effective, reference, cts.Token).ConfigureAwait(false);
+                    if (rename.Tagged) outcome = outcome with { Reference = reference }; // 提示按用户写的名字报
+                    renameFailure = rename.Message;
+                }
             }
             catch (OperationCanceledException)
             {
@@ -200,7 +248,7 @@ public sealed partial class ImagesPageViewModel : ObservableObject
         if (cancelled)
         {
             // AC6:取消之后不刷新(实测半途终止不会留下不完整的镜像),只说明已取消。
-            await RunOnUiAsync(() => Notice = Fmt("images.pull-cancelled", reference)).ConfigureAwait(false);
+            await RunOnUiAsync(() => Notice = Fmt("images.pull-cancelled", effective)).ConfigureAwait(false);
             return null;
         }
 
@@ -211,9 +259,49 @@ public sealed partial class ImagesPageViewModel : ObservableObject
         }
 
         // AC8:成功 → 提示 + 刷新一次。
-        await RunOnUiAsync(() => Notice = outcome!.Notice).ConfigureAwait(false);
+        // 功能 010 · AC5/AC6:镜像已经在本机了,改名没做干净时绿色提示与红色错误条同时出现,不把结果说成失败。
+        // 顺序要紧:刷新成功时会把 Error 清成 null,改名的补充说明必须等刷完再写,否则会被冲掉。
         await RefreshAsync(cancellationToken).ConfigureAwait(false);
+        await RunOnUiAsync(() =>
+        {
+            Notice = outcome!.Notice;
+            if (renameFailure is not null)
+            {
+                Error = Error is null ? renameFailure : Error + " · " + renameFailure; // 两件事都出错就都说明,不互相吞
+            }
+        }).ConfigureAwait(false);
         return outcome;
+    }
+
+    /// <summary>
+    /// 把带镜像站前缀的引用改名回用户输入的名字:<c>wslc tag</c> 上新名字,再 <c>wslc rmi</c> 去掉旧名字
+    /// (功能 010 · AC5;实测多标签时 rmi 只取消标记,镜像数据不动,见功能 004 的实测表)。
+    /// Tagged 表示新名字已经打上(界面据此用用户写的名字报成功);Message 非空时是要展示的那句补充说明。
+    /// </summary>
+    private async Task<(bool Tagged, string? Message)> RenameAfterMirrorAsync(
+        string effective,
+        string typed,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await _service.TagAsync(effective, typed, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            return (false, Fmt("images.mirror.retag-failed", effective, WslcError.Describe(ex)));
+        }
+
+        try
+        {
+            await _service.RemoveAsync(effective, force: false, cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            return (true, Fmt("images.mirror.untag-failed", typed, WslcError.Describe(ex)));
+        }
+
+        return (true, null);
     }
 
     /// <summary>

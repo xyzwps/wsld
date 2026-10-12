@@ -74,6 +74,31 @@
                 </StackPanel>
             </Border>
 
+            <!-- 镜像加速(功能 010 · AC1/AC7):填一次,拉镜像时不必再手写镜像站前缀 -->
+            <Border Style="{StaticResource CardBorderStyle}">
+                <StackPanel Spacing="8">
+                    <TextBlock x:Name="MirrorHeader" Style="{StaticResource SectionHeaderStyle}" />
+                    <TextBlock x:Name="MirrorLabel" Style="{StaticResource RowLabelStyle}" />
+                    <TextBox x:Name="MirrorBox"
+                             Width="320"
+                             HorizontalAlignment="Left"
+                             TextChanged="MirrorBox_TextChanged"
+                             KeyDown="MirrorBox_KeyDown"
+                             LostFocus="MirrorBox_LostFocus" />
+                    <TextBlock x:Name="MirrorPreviewText"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               TextWrapping="Wrap" />
+                    <CheckBox x:Name="RenameMirrorOption"
+                              Checked="RenameMirrorOption_Toggled"
+                              Unchecked="RenameMirrorOption_Toggled" />
+                    <TextBlock x:Name="MirrorNoteText"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
             <!-- 关于 -->
             <Border Style="{StaticResource CardBorderStyle}">
                 <StackPanel Spacing="8">

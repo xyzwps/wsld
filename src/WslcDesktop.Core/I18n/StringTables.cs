@@ -48,6 +48,9 @@ public static class StringTables
             ["images.pull-cancelled"] = "已取消拉取 {0}",
             ["images.deleting"] = "正在删除 {0}",
             ["images.deleted"] = "已删除 {0}",
+            ["images.pull.via-mirror"] = "镜像源实际会拉取:{0}",
+            ["images.mirror.retag-failed"] = "镜像已经拉到本机({0}),但没能改名回你输入的名字:{1}",
+            ["images.mirror.untag-failed"] = "已经改名为 {0},但带镜像站前缀的那个标签没能去掉:{1}",
 
             // ---- Core:日志页 ----
             ["logs.no-source"] = "请先在上方选择一个容器。",
@@ -160,6 +163,13 @@ public static class StringTables
             ["settings.wslc-not-found"] = "未找到 wslc.exe",
             ["settings.app-version"] = "应用版本",
             ["settings.settings-file"] = "设置文件",
+            ["settings.mirror"] = "镜像加速",
+            ["settings.mirror.label"] = "镜像源地址(留空 = 不使用)",
+            ["settings.mirror.placeholder"] = "例如 docker.1ms.run",
+            ["settings.mirror.preview"] = "输入 redis:7 时,实际会拉取 {0}",
+            ["settings.mirror.invalid"] = "这一串不像注册地址:应写成 registry.example.com,可以带端口或路径前缀。",
+            ["settings.mirror.rename"] = "拉取后把镜像改名回我输入的名字",
+            ["settings.mirror.note"] = "只改写 Docker Hub 的名字(nginx、bitnami/redis、docker.io/…);已经写全域名的(如 ghcr.io/…)按原样拉取。wslc 3.0.1 本身没有镜像源选项(实测其 settings.yaml 里没有任何 registry 配置项),改写发生在应用这一层:先改写引用再调用 wslc pull。",
             ["language.name.zh"] = "简体中文",
             ["language.name.en"] = "英文",
         };
@@ -200,6 +210,9 @@ public static class StringTables
             ["images.pull-cancelled"] = "Cancelled the pull of {0}",
             ["images.deleting"] = "Deleting {0}",
             ["images.deleted"] = "Deleted {0}",
+            ["images.pull.via-mirror"] = "The mirror will actually pull: {0}",
+            ["images.mirror.retag-failed"] = "The image is already on this machine ({0}), but it could not be renamed to what you typed: {1}",
+            ["images.mirror.untag-failed"] = "Renamed to {0}, but the mirror-prefixed tag could not be removed: {1}",
 
             ["logs.no-source"] = "Select a container above first.",
             ["logs.not-loaded"] = "Not loaded yet",
@@ -304,6 +317,13 @@ public static class StringTables
             ["settings.wslc-not-found"] = "wslc.exe not found",
             ["settings.app-version"] = "App version",
             ["settings.settings-file"] = "Settings file",
+            ["settings.mirror"] = "Registry mirror",
+            ["settings.mirror.label"] = "Mirror address (blank disables it)",
+            ["settings.mirror.placeholder"] = "e.g. docker.1ms.run",
+            ["settings.mirror.preview"] = "Typing redis:7 would pull {0}",
+            ["settings.mirror.invalid"] = "That doesn't look like a registry host. Use registry.example.com, optionally with a port or path prefix.",
+            ["settings.mirror.rename"] = "Rename pulled images back to the reference I typed",
+            ["settings.mirror.note"] = "Only Docker Hub names are rewritten (nginx, bitnami/redis, docker.io/…); references that already name a registry (ghcr.io/…) are pulled as typed. wslc 3.0.1 has no mirror option of its own (its settings.yaml has no registry keys at all), so the app rewrites the reference before calling wslc pull.",
             ["language.name.zh"] = "Simplified Chinese",
             ["language.name.en"] = "English",
         };

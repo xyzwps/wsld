@@ -290,3 +290,38 @@ WinUI 的 `ButtonBase` 监听 `ICommand.CanExecuteChanged`,并把结果**直接�
 **修复**:`tools/win32-cap.cs` 导出 `DwmGetWindowAttribute` + `DWMWA_EXTENDED_FRAME_BOUNDS`,
 `tools/capture-window.ps1` 优先用 DWM 边界,拿到后四边各 inset 2px,拿不到才退回 `GetWindowRect`。
 配合 #21(按面积挑最大窗口 + 截图前把焦点从按钮上移开)才能稳定出干净截图。
+
+## 26. `wslc` 3.0.1 根本没有镜像源开关,加速只能做在应用这一层
+
+**症状**:想给镜像页加"registry mirror",第一反应是"写进 wslc 的配置就行"。
+
+**真相**:`wslc` 没有这个开关。实测 `wslc settings` 生成/读取的
+`%LOCALAPPDATA%\wslc\settings.yaml` 只有 `session.*`(cpuCount / memorySize / maxStorageSize /
+storagePath / networkingMode / hostFileShareMode / dnsTunneling / hostLoopback /
+defaultBindingAddress / idleTimeout)、`credentialStore`、`experimental.portRelay` 这些键;
+`wslc registry` 只管登录凭据;`wslc pull` 只有 `-a` / `-q`;二进制里 `strings` 搜不到任何
+mirror 相关的键名。也就是说 Docker 那个 `daemon.json → registry-mirrors` 在 wslc 上没有对应物。
+
+**做法**:改写引用 —— 用户输入 `redis:7`,应用实际执行 `wslc pull docker.1ms.run/library/redis:7`,
+成功后再 `wslc tag` 改回 `redis:7`、`wslc rmi` 去掉镜像站那个标签(实测多标签时 `rmi` 只 untag,镜像数据不动)。
+规则按 Docker 的引用规范化对齐:裸名字属于官方库要补 `library/`,`bitnami/redis` 直接接在镜像站后面,
+`docker.io/…` 三种等价写法都算 Hub;已经写全域名的(`ghcr.io/…`、`localhost:5000/…`)一律不碰。
+逻辑全在 `RegistryMirrorPolicy`(Core,可单测),服务层不掺规则。
+
+**顺带一个坑**:`wslc rmi <其中一个标签>` 的输出只有 `已取消标记:`,没有 `已删除:` ——
+用它做"改名收尾"时千万别以为把镜像删了。反过来,改名顺序**必须**是先 `tag` 后 `rmi`,
+写反了就是真删镜像。
+
+## 27. 用 SendKeys 往 WinUI 输入框灌地址,会被中文 IME 吃掉
+
+**症状**:自动化脚本里 `SendKeys::SendWait("https://Docker.1ms.run/")`,界面上文本框里的内容
+面目全非,应用回"这一串不像注册地址",看着像规范化逻辑写错了。
+
+**真相**:系统输入法是中文时,SendKeys 走的是键盘消息 → IME 处理,英文字母先进候选框,
+`/`、`.` 这些也被 IME 吞掉,真正落到 `TextBox.Text` 的是别的字符。
+
+**做法**:验证输入框一律用 UIA 的 `ValuePattern.SetValue()`(直接写文本,绕开输入法),
+需要触发提交再单独发 `{ENTER}` / `{TAB}` 这类控制键。WinUI 的 `TextBox` 支持 ValuePattern;
+它的 UIA `Name` 是 PlaceholderText,所以判断"框里到底是什么"要看 `Value` 而不是 `Name`。
+另外 `NavigationView` 的导航项要用 `SelectionItemPattern.Select()`(`ListItemPattern` 这个类型
+在 .NET 的 UIAutomation 里不存在,别照着旧名字写)。

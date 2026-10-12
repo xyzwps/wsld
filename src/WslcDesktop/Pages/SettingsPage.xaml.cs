@@ -1,15 +1,18 @@
 using System.Reflection;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using WslcDesktop.Core.I18n;
+using WslcDesktop.Core.Services;
 using WslcDesktop.Core.Settings;
 using WslcDesktop.Services;
 
 namespace WslcDesktop.Pages;
 
 /// <summary>
-/// 设置页(功能 009 · AC2/AC3/AC5):主题、语言、运行环境信息。
+/// 设置页(功能 009 · AC2/AC3/AC5,功能 010 · AC1/AC7):主题、语言、镜像加速、运行环境信息。
 /// 选中即生效、即存盘,没有"保存"按钮 —— 少一步,也免得改了没存。
+/// 唯一需要打字输入的是镜像源:边打字边看效果,回车 / 焦点离开 / 离开本页时落盘。
 /// 换语言会触发主窗口重建页面,本页会被换成一个新实例,文案因此永远是当前语言的。
 /// </summary>
 public sealed partial class SettingsPage : Page
@@ -21,6 +24,9 @@ public sealed partial class SettingsPage : Page
     {
         InitializeComponent();
         ApplyTexts();
+
+        // 镜像源是打字输入的:离开本页时把没来得及落盘的内容补上(点别处通常已经触发 LostFocus)。
+        Unloaded += (_, _) => CommitMirrorBox();
     }
 
     /// <summary>外部(标题栏主题按钮)改过设置后,让本页的选中态跟上。</summary>
@@ -49,6 +55,12 @@ public sealed partial class SettingsPage : Page
         LanguageCurrentText.Text = loc.Fmt("settings.language.hint", loc.LanguageDisplayName);
         LanguageNoteText.Text = loc.Get("settings.language.note");
 
+        MirrorHeader.Text = loc.Get("settings.mirror");
+        MirrorLabel.Text = loc.Get("settings.mirror.label");
+        MirrorBox.PlaceholderText = loc.Get("settings.mirror.placeholder");
+        RenameMirrorOption.Content = loc.Get("settings.mirror.rename");
+        MirrorNoteText.Text = loc.Get("settings.mirror.note");
+
         AboutHeader.Text = loc.Get("settings.about");
         VersionLabel.Text = loc.Get("settings.app-version");
         VersionValue.Text = ResolveAppVersion();
@@ -65,7 +77,67 @@ public sealed partial class SettingsPage : Page
         LanguageZhOption.IsChecked = AppState.Language == AppLanguage.ZhCn;
         LanguageEnOption.IsChecked = AppState.Language == AppLanguage.En;
 
+        MirrorBox.Text = AppState.RegistryMirror;
+        RenameMirrorOption.IsChecked = AppState.RenameMirrorPull;
+
         _loading = false;
+        UpdateMirrorPreview(); // 回填完再算一次预览,不然新建页面时这一行是空的
+    }
+
+    // ---------- 镜像加速(功能 010) ----------
+
+    /// <summary>打字时只刷预览,不落盘 —— 每按一个键写一次设置文件没意义。</summary>
+    private void MirrorBox_TextChanged(object sender, TextChangedEventArgs e) => UpdateMirrorPreview();
+
+    /// <summary>回车即生效(与"选中即生效"的约定对齐)。</summary>
+    private void MirrorBox_KeyDown(object sender, KeyRoutedEventArgs e)
+    {
+        if (e.Key != Windows.System.VirtualKey.Enter) return;
+
+        CommitMirrorBox();
+        e.Handled = true;
+    }
+
+    private void MirrorBox_LostFocus(object sender, RoutedEventArgs e) => CommitMirrorBox();
+
+    private void RenameMirrorOption_Toggled(object sender, RoutedEventArgs e)
+    {
+        if (_loading) return;
+        AppState.SetRenameMirrorPull(RenameMirrorOption.IsChecked == true);
+    }
+
+    private void CommitMirrorBox()
+    {
+        if (_loading) return;
+        var value = MirrorBox.Text?.Trim() ?? "";
+        if (string.Equals(value, AppState.RegistryMirror, StringComparison.Ordinal)) return;
+
+        AppState.SetRegistryMirror(value);
+        MirrorBox.Text = value; // 把首尾空白清掉,别让框里看着像"什么都没填"
+        UpdateMirrorPreview();
+    }
+
+    /// <summary>预览那句"输入 redis:7 时实际会拉取 …";地址不合法时改成一句提醒(功能 010 · AC1)。</summary>
+    private void UpdateMirrorPreview()
+    {
+        if (_loading) return;
+
+        var typed = MirrorBox.Text?.Trim() ?? "";
+        if (typed.Length == 0)
+        {
+            MirrorPreviewText.Text = "";
+            return;
+        }
+
+        if (!RegistryMirrorPolicy.TryNormalize(typed, out var normalized))
+        {
+            MirrorPreviewText.Text = Localizer.Default.Get("settings.mirror.invalid");
+            return;
+        }
+
+        MirrorPreviewText.Text = Localizer.Default.Fmt(
+            "settings.mirror.preview",
+            RegistryMirrorPolicy.Rewrite("redis:7", normalized).Reference);
     }
 
     private void Option_Checked(object sender, RoutedEventArgs e)

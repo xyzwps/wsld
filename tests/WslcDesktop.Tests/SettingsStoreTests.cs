@@ -134,4 +134,59 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.EndsWith(Path.Combine("WslcDesktop", "settings.json"), SettingsStore.FilePath);
         Assert.StartsWith(string.IsNullOrEmpty(expectedRoot) ? Path.GetTempPath() : expectedRoot, SettingsStore.FilePath);
     }
+
+    // ---------- 功能 010 · AC1/AC7 · 镜像源字段 ----------
+
+    [Fact]
+    public void RoundTrip_KeepsRegistryMirrorAndRenameOption()
+    {
+        var saved = SettingsStore.SaveTo(
+            new AppSettings { RegistryMirror = "docker.1ms.run", RenameMirrorPull = false }, SettingsPath);
+
+        Assert.True(saved);
+        var loaded = SettingsStore.LoadFrom(SettingsPath);
+        Assert.Equal("docker.1ms.run", loaded.RegistryMirror);
+        Assert.False(loaded.RenameMirrorPull);
+    }
+
+    [Fact]
+    public void OldFile_WithoutMirrorFields_KeepsWorkingWithDefaults()
+    {
+        // 009 时代存的文件只有 Theme / Language,新增字段必须有默认值(开发笔记 #9)。
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(SettingsPath, """{"Theme":"Light","Language":"En"}""");
+
+        var loaded = SettingsStore.LoadFrom(SettingsPath);
+        Assert.Equal("", loaded.RegistryMirror);   // 默认不使用镜像源
+        Assert.True(loaded.RenameMirrorPull);      // 默认帮用户把名字改回来
+    }
+
+    [Fact]
+    public void NullMirrorInFile_DoesNotBecomeNull()
+    {
+        Directory.CreateDirectory(_dir);
+        File.WriteAllText(SettingsPath, """{"RegistryMirror":null}""");
+
+        Assert.Equal("", SettingsStore.LoadFrom(SettingsPath).RegistryMirror);
+    }
+
+    [Fact]
+    public void AssigningNullMirror_FallsBackToEmptyString()
+    {
+        var settings = new AppSettings { RegistryMirror = "docker.1ms.run" };
+        settings.RegistryMirror = null!;
+
+        Assert.Equal("", settings.RegistryMirror);
+    }
+
+    [Fact]
+    public void SavedFile_NamesTheMirrorFieldsReadable()
+    {
+        SettingsStore.SaveTo(new AppSettings { RegistryMirror = "localhost:5000/mirror" }, SettingsPath);
+        var text = File.ReadAllText(SettingsPath);
+
+        // 存的是用户写的那串原样(规范化在使用侧做),手改文件时也一眼能认出来。
+        Assert.Contains("\"RegistryMirror\": \"localhost:5000/mirror\"", text);
+        Assert.Contains("\"RenameMirrorPull\": true", text);
+    }
 }

@@ -38,6 +38,9 @@ public sealed partial class MainWindow : Window
         };
         ApplyTheme();
 
+        // 镜像源:设置页改完,已经缓存着的镜像页要重算"实际会拉哪个引用"(功能 010 · AC7)。
+        AppState.MirrorChanged += (_, _) => RefreshImagesMirrorState();
+
         // 语言:换文案 + 重建当前页。
         Localizer.Default.LanguageChanged += (_, _) =>
         {
@@ -235,6 +238,17 @@ public sealed partial class MainWindow : Window
         if (_pages.TryGetValue("settings", out var page) && page is SettingsPage settings)
         {
             settings.RefreshFromState();
+        }
+    }
+
+    /// <summary>
+    /// 镜像页是缓存的(切走再回来不重建),设置里改镜像源时靠这里把预览文案推平。
+    /// </summary>
+    private void RefreshImagesMirrorState()
+    {
+        if (_pages.TryGetValue("images", out var page) && page is ImagesPage images)
+        {
+            images.ViewModel.RefreshMirrorState();
         }
     }
 
