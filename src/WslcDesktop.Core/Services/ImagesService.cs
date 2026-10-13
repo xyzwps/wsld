@@ -6,7 +6,7 @@ namespace WslcDesktop.Core.Services;
 
 /// <summary>
 /// 镜像相关的 wslc 调用。
-/// 功能 003:列表查询;功能 004:拉取与删除;功能 010:打标签(镜像源改名)。
+/// 功能 003:列表查询;功能 004:拉取与删除;功能 010:打标签(镜像源改名);功能 011:拉取实时进度。
 /// </summary>
 public sealed class ImagesService
 {
@@ -41,6 +41,26 @@ public sealed class ImagesService
     {
         var target = RequireReference(reference);
         var result = await _cli.RunAsync(new[] { "pull", target }, cancellationToken).ConfigureAwait(false);
+        if (result.ExitCode != 0)
+        {
+            throw new WslcCliException("wslc pull", result);
+        }
+        return WslcPullLog.Parse(target, result.StdOut);
+    }
+
+    /// <summary>
+    /// 带实时进度的拉取(功能 011 · AC1/AC4):命令、结果解析、失败判定与 <see cref="PullAsync"/> 完全一致,
+    /// 只是走伪终端,所以分层进度能边下边上屏;<paramref name="onVisibleLines"/> 在后台读线程上被调用。
+    /// 保留 <see cref="PullAsync"/> 不动,是因为服务层与集成测试都还在用它验证同一条命令映射(AC5)。
+    /// </summary>
+    public async Task<PullResult> PullWithProgressAsync(
+        string reference,
+        Action<IReadOnlyList<string>>? onVisibleLines = null,
+        CancellationToken cancellationToken = default)
+    {
+        var target = RequireReference(reference);
+        var result = await _cli.RunWithConsoleAsync(new[] { "pull", target }, onVisibleLines, cancellationToken)
+            .ConfigureAwait(false);
         if (result.ExitCode != 0)
         {
             throw new WslcCliException("wslc pull", result);

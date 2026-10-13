@@ -33,7 +33,7 @@
                 Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                 BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
                 BorderThickness="1">
-            <Grid RowDefinitions="Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto"
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto"
                   ColumnSpacing="8" RowSpacing="8">
 
                 <TextBox x:Name="PullBox"
@@ -59,7 +59,7 @@
                         Command="{x:Bind ViewModel.CancelPullCommand, Mode=OneTime}"
                         Visibility="{x:Bind ViewModel.IsPulling, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
 
-                <!-- 进度(功能 004 · AC7:实测拿不到百分比,只报"在做什么 + 已等待几秒") -->
+                <!-- 进度(功能 004 · AC7:已等待秒数 + 功能 011 · AC2:已下载量与完成层数) -->
                 <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
                             Orientation="Horizontal" Spacing="8"
                             Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}">
@@ -68,10 +68,41 @@
                     <TextBlock FontSize="12" VerticalAlignment="Center"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Text="{x:Bind ViewModel.BusyText, Mode=OneWay}" />
+                    <TextBlock FontSize="12" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               Visibility="{x:Bind ViewModel.HasPullSummary, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                               Text="{x:Bind ViewModel.PullSummary, Mode=OneWay}" />
                 </StackPanel>
 
+                <!-- 实时进度(功能 011 · AC3):wslc 在伪终端里渲染的分层进度,原样搬上来。
+                     只读、等宽、可整块复制 —— 和日志区一个路子;最多 160 DIP,超出后框内滚动。
+                     一行代表一个分层的最新状态,所以行数只随层数增长,不会随刷新次数变长。 -->
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                        MaxHeight="160"
+                        CornerRadius="4"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        Visibility="{x:Bind ViewModel.HasPullProgress, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                    <TextBox x:Name="PullProgressBar"
+                             Padding="10"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             FontFamily="Consolas, Cascadia Mono, Courier New"
+                             FontSize="12"
+                             IsReadOnly="True"
+                             IsTabStop="False"
+                             IsSpellCheckEnabled="False"
+                             AcceptsReturn="True"
+                             TextWrapping="NoWrap"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                             ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=pull.progress.tooltip}"
+                             Text="{x:Bind ViewModel.PullProgressText, Mode=OneWay}" />
+                </Border>
+
                 <!-- 镜像源预览(功能 010 · AC4):只有真的改写了引用才占这一行 -->
-                <TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
                            FontSize="12" TextWrapping="Wrap"
                            Visibility="{x:Bind ViewModel.HasPullMirrorHint, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                            Foreground="{ThemeResource TextFillColorTertiaryBrush}"

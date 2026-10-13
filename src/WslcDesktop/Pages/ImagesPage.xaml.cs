@@ -7,12 +7,13 @@ using WslcDesktop.Core;
 using WslcDesktop.Core.I18n;
 using WslcDesktop.Core.ViewModels;
 using WslcDesktop.Services;
+using WslcDesktop.Ui;
 using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Pages;
 
 /// <summary>
-/// 镜像页(功能 003:列表;功能 004:拉取与删除;功能 010:镜像源预览)。
+/// 镜像页(功能 003:列表;功能 004:拉取与删除;功能 010:镜像源预览;功能 011:拉取实时进度)。
 /// 页面只做呈现与交互约定:回车即拉取、删除前先弹确认框、被占用时把按钮文案交给 Core 决定。
 /// 命令拼装、互斥、强制删除策略、错误清洗都在 Core 的 ImagesPageViewModel 里。
 /// 与容器页一样不启动自动刷新(功能 003 · AC12)。
@@ -54,6 +55,13 @@ public sealed partial class ImagesPage : Page
             if (e.PropertyName == nameof(ImagesPageViewModel.IsBusy) && ViewModel.IsBusy)
             {
                 _tickTimer.Start();
+            }
+
+            // 功能 011 · AC3:进度是新写入的一帧,视图要停在最后一行才看得见"正在动的东西"。
+            // 和日志区一样等这一帧布局完成再滚,否则 ScrollableHeight 还是旧内容的值。
+            if (e.PropertyName == nameof(ImagesPageViewModel.PullProgressText))
+            {
+                DispatcherQueue.TryEnqueue(() => TextBoxScroller.ScrollToBottom(PullProgressBar));
             }
         };
 

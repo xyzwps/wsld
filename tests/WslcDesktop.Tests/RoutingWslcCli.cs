@@ -31,6 +31,17 @@ public sealed class RoutingWslcCli : IWslcCli
     /// <summary>只记录走了逐行回调路径的调用。</summary>
     public List<IReadOnlyList<string>> StreamCalls { get; } = new();
 
+    /// <summary>伪终端路径的接管者(功能 011):制造"拉取中途一帧帧上屏"的场景。</summary>
+    public Func<IReadOnlyList<string>, Action<IReadOnlyList<string>>?, CancellationToken, Task<WslcCliResult>>? ConsoleHandler { get; set; }
+
+    /// <summary>只记录走伪终端的调用(pull 才有)。</summary>
+    public List<IReadOnlyList<string>> ConsoleCalls { get; } = new();
+
+    public int CountConsoleCalls(string verb) => ConsoleCalls.Count(args => args.Count > 0 && args[0] == verb);
+
+    public IReadOnlyList<string> LastConsoleCall(string verb) =>
+        ConsoleCalls.LastOrDefault(args => args.Count > 0 && args[0] == verb) ?? Array.Empty<string>();
+
     public RoutingWslcCli Enqueue(int exitCode, string stdout = "", string stderr = "")
     {
         _scriptedResults.Enqueue(new WslcCliResult(exitCode, stdout, stderr));
@@ -66,7 +77,12 @@ public sealed class RoutingWslcCli : IWslcCli
     public Task<WslcCliResult> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
     {
         Calls.Add(arguments);
+        return RouteAsync(arguments, cancellationToken);
+    }
 
+    /// <summary>除了列表之外都算"操作":优先交给接管者(闸门),再退到脚本队列。</summary>
+    private Task<WslcCliResult> RouteAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken)
+    {
         if (arguments.Count > 0 && arguments[0] == "images")
         {
             return Task.FromResult(new WslcCliResult(0, ListJson, ""));
@@ -111,6 +127,37 @@ public sealed class RoutingWslcCli : IWslcCli
         }
 
         return FromScriptAsync();
+    }
+
+    /// <summary>
+    /// 伪终端路径(功能 011):记录调用后按脚本给结果,并把屏幕行一次性回调出去 ——
+    /// 与真实现"结束时屏幕上就是这些行"等价;要测中途的帧就换 <see cref="ConsoleHandler"/>。
+    /// </summary>
+    public async Task<WslcCliResult> RunWithConsoleAsync(
+        IReadOnlyList<string> arguments,
+        Action<IReadOnlyList<string>>? onVisibleLines,
+        CancellationToken cancellationToken = default)
+    {
+        Calls.Add(arguments);
+        ConsoleCalls.Add(arguments);
+
+        if (ConsoleHandler is not null)
+        {
+            return await ConsoleHandler(arguments, onVisibleLines, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (_scriptedStreams.Count > 0)
+        {
+            var (exitCode, lines, stderr) = _scriptedStreams.Dequeue();
+            onVisibleLines?.Invoke(lines);
+            return new WslcCliResult(exitCode, string.Join("\n", lines), stderr);
+        }
+
+        // 路由规则与 RunAsync 保持一致:闸门接管者(ActionHandler)必须照样生效,
+        // 否则"拉取挂起中"这类场景会在新路径上悄悄失效。
+        var result = await RouteAsync(arguments, cancellationToken).ConfigureAwait(false);
+        onVisibleLines?.Invoke(WslcLogText.Split(result.StdOut));
+        return result;
     }
 
     private Task<WslcCliResult> FromScriptAsync() =>

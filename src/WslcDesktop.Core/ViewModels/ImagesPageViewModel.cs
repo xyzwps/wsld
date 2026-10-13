@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using WslcDesktop.Core.Models;
+using WslcDesktop.Core.Parsing;
 using WslcDesktop.Core.Services;
 using WslcDesktop.Core.Settings;
 using WslcDesktop.Core.WslcCli;
@@ -15,6 +16,7 @@ namespace WslcDesktop.Core.ViewModels;
 /// 功能 004:拉取(可取消)与删除(被占用时二次确认升级为强制删除),
 /// 全局单操作互斥,成功后刷新一次并给出提示。
 /// 功能 010:启用了镜像源(registry mirror)时,拉取前先改写引用,拉完再把镜像改名回用户输入的名字。
+/// 功能 011:拉取期间把 wslc 在伪终端里渲染的分层进度实时搬到界面上,并汇总"已下载多少 / 完成几层"。
 /// </summary>
 public sealed partial class ImagesPageViewModel : ObservableObject
 {
@@ -31,6 +33,16 @@ public sealed partial class ImagesPageViewModel : ObservableObject
     private volatile bool _refreshing;
     private int _operationActive;
     private CancellationTokenSource? _pullCts;
+    private PullProgressSnapshot? _pullProgress;
+    private IReadOnlyList<string> _lastPushedLines = Array.Empty<string>();
+
+    /// <summary>
+    /// 这一次拉取里"每层已下载字节的历史最大值"台账(功能 011 · AC2)。
+    /// 累计发生在后台读线程、清空发生在 UI 线程,两边共用一把锁;
+    /// 每一层只增不减,某层不再报字节数(Download complete 之后)也不会让界面上的"已下载"倒退。
+    /// </summary>
+    private readonly Dictionary<string, long> _pullLayerBytes = new(StringComparer.OrdinalIgnoreCase);
+
     private ImageItemViewModel? _busyItem;
     private string _busyTarget = "";
     private DateTimeOffset _busyStartedAt;
@@ -47,6 +59,13 @@ public sealed partial class ImagesPageViewModel : ObservableObject
     }
 
     public ObservableCollection<ImageItemViewModel> Items { get; } = new();
+
+    /// <summary>
+    /// 拉取期间"屏幕上看得见"的进度文本(功能 011 · AC3)。
+    /// 每一层的最新状态占一行,所以文本长度只随层数增长,不会随 wslc 的刷新次数无限变长;
+    /// 用 CRLF 拼接是实测结论 —— 只读文本框认 CRLF(与日志区同一套做法)。
+    /// </summary>
+    public string PullProgressText { get; private set; } = "";
 
     /// <summary>
     /// 应用设置(功能 010 · AC1)。界面传进来的是 <c>AppState.Current</c> 同一个实例,
@@ -71,6 +90,7 @@ public sealed partial class ImagesPageViewModel : ObservableObject
     [ObservableProperty] private string _pullText = "";
     [ObservableProperty] private string _lastRefreshedAtText = T("refresh.never");
     [ObservableProperty] private bool _isPulling;
+    [ObservableProperty] private bool _hasPullProgress;
 
     /// <summary>汇总行(功能 003 · AC10)。数字来自全量数据,不受搜索过滤影响。</summary>
     public string Summary => TotalCount == 0
@@ -87,6 +107,19 @@ public sealed partial class ImagesPageViewModel : ObservableObject
 
     /// <summary>操作提示条(AC8)。</summary>
     public bool HasNotice => !string.IsNullOrEmpty(Notice);
+
+    /// <summary>
+    /// 进度汇总一句话(功能 011 · AC2):已下载量 + 完成层数。
+    /// 还没拿到 Manifest(层数为 0)时返回空串,界面上这一行就不占位置。
+    /// </summary>
+    public string PullSummary => _pullProgress is { TotalLayers: > 0 } p
+        ? Fmt("pull.summary", FormatBytes(p.DownloadedBytes), p.DoneLayers, p.TotalLayers)
+        : "";
+
+    /// <summary>这一句要不要显示(有层数才显示,免得拉取刚开始挂个空壳)。</summary>
+    public bool HasPullSummary => PullSummary.Length > 0;
+
+    private static string FormatBytes(long bytes) => WslcPullProgress.FormatBytes(bytes);
 
     /// <summary>
     /// 进度文案(AC7)。实测 `wslc pull` 的输出要等进程结束才一次性冲刷,
@@ -219,7 +252,9 @@ public sealed partial class ImagesPageViewModel : ObservableObject
         {
             try
             {
-                outcome = await _service.PullAsync(effective, cts.Token).ConfigureAwait(false);
+                outcome = await _service
+                    .PullWithProgressAsync(effective, OnPullProgressLines, cts.Token)
+                    .ConfigureAwait(false);
 
                 // 功能 010 · AC5:改名属于同一次拉取操作的收尾,不放开全局互斥,免得中途被删除/刷新插队。
                 if (rewrite.Rewritten && Settings.RenameMirrorPull && !cts.IsCancellationRequested)
@@ -271,6 +306,54 @@ public sealed partial class ImagesPageViewModel : ObservableObject
             }
         }).ConfigureAwait(false);
         return outcome;
+    }
+
+    /// <summary>
+    /// 进度回调(功能 011 · AC3)。跑在后台读线程上:先把屏幕行解析成结构化进度,
+    /// 内容与上一次完全相同时直接丢掉(一帧里 wslc 会连写好几个转义块,不去重就是无谓的界面刷新),
+    /// 真正变了才调度回 UI 线程。这里绝不抛异常 —— 刷新失败不该把一次拉取报成命令失败。
+    /// </summary>
+    private void OnPullProgressLines(IReadOnlyList<string> lines)
+    {
+        if (lines.Count == 0 || SameAsLastPush(lines)) return;
+        _lastPushedLines = lines;
+        PullProgressSnapshot snapshot;
+        lock (_pullLayerBytes)
+        {
+            snapshot = WslcPullProgress.Parse(lines, _pullLayerBytes);
+        }
+        try
+        {
+            // 不等待:进度是"锦上添花",回 UI 线程排不上队也不能拖累读线程。
+            _ = RunOnUiAsync(() => ApplyPullProgress(snapshot));
+        }
+        catch (Exception)
+        {
+            // 没有 UI 线程时 RunOnUiAsync 会就地执行,这里兜住它的一切异常。
+        }
+    }
+
+    private bool SameAsLastPush(IReadOnlyList<string> lines)
+    {
+        var last = _lastPushedLines;
+        if (last.Count != lines.Count) return false;
+        for (var i = 0; i < lines.Count; i++)
+        {
+            if (!string.Equals(last[i], lines[i], StringComparison.Ordinal)) return false;
+        }
+
+        return true;
+    }
+
+    /// <summary>UI 线程:整块替换进度行,并刷新那句"已下载 X · 完成 N/M 层"(AC2/AC3)。</summary>
+    private void ApplyPullProgress(PullProgressSnapshot snapshot)
+    {
+        _pullProgress = snapshot;
+        PullProgressText = WslcLogText.Join(snapshot.Lines);
+        HasPullProgress = snapshot.Lines.Count > 0;
+        OnPropertyChanged(nameof(PullProgressText));
+        OnPropertyChanged(nameof(PullSummary));
+        OnPropertyChanged(nameof(HasPullSummary));
     }
 
     /// <summary>
@@ -402,6 +485,20 @@ public sealed partial class ImagesPageViewModel : ObservableObject
         _busyStartedAt = DateTimeOffset.Now;
         if (item is not null) item.IsBusy = true;
         IsPulling = pulling;
+        // 功能 011:上一次拉取的进度行不能留在这一页上,所以开始即清空。
+        _pullProgress = null;
+        _lastPushedLines = Array.Empty<string>();
+        // 台账只属于这一次拉取:留着上一次的数字,下一趟的"已下载"就会从半路开始。
+        // 清空与读线程的累计共用一把锁,免得上一趟的最后一帧正好插进来。
+        lock (_pullLayerBytes)
+        {
+            _pullLayerBytes.Clear();
+        }
+        PullProgressText = "";
+        HasPullProgress = false;
+        OnPropertyChanged(nameof(PullProgressText));
+        OnPropertyChanged(nameof(PullSummary));
+        OnPropertyChanged(nameof(HasPullSummary));
         RaiseBusyState();
     }
 
@@ -413,6 +510,13 @@ public sealed partial class ImagesPageViewModel : ObservableObject
         _busyItem = null;
         _busyTarget = "";
         IsPulling = false;
+        // 功能 011:进度面板随操作一起收起,剩下的是结果提示和新列表(AC4)。
+        _pullProgress = null;   // 汇总数字也属于"这一次拉取",留着迟早会串到下一次
+        HasPullProgress = false;
+        PullProgressText = "";
+        OnPropertyChanged(nameof(PullProgressText));
+        OnPropertyChanged(nameof(PullSummary));
+        OnPropertyChanged(nameof(HasPullSummary));
         RaiseBusyState();
     });
 

@@ -7,6 +7,7 @@ using WslcDesktop.Core;
 using WslcDesktop.Core.I18n;
 using WslcDesktop.Core.ViewModels;
 using WslcDesktop.Services;
+using WslcDesktop.Ui;
 
 namespace WslcDesktop.Pages;
 
@@ -67,26 +68,8 @@ public sealed partial class LogsPage : Page
         DispatcherQueue.TryEnqueue(ScrollToBottom);
     }
 
-    private void ScrollToBottom()
-    {
-        if (LogBox.Text.Length == 0) return;
-        if (FindScrollViewer(LogBox) is not { } viewer) return;
-        viewer.ChangeView(null, viewer.ScrollableHeight, null);
-    }
-
-    /// <summary>WinUI 的 TextBox 没有公开的滚动 API,从模板里找它自带的 ScrollViewer。</summary>
-    private static ScrollViewer? FindScrollViewer(DependencyObject root)
-    {
-        var count = VisualTreeHelper.GetChildrenCount(root);
-        for (var i = 0; i < count; i++)
-        {
-            var child = VisualTreeHelper.GetChild(root, i);
-            if (child is ScrollViewer viewer) return viewer;
-            if (FindScrollViewer(child) is { } nested) return nested;
-        }
-
-        return null;
-    }
+    /// <summary>滚动实现抽到 TextBoxScroller(功能 011):日志区与拉取进度区共用同一份"从模板里找 ScrollViewer"。</summary>
+    private void ScrollToBottom() => TextBoxScroller.ScrollToBottom(LogBox);
 
     /// <summary>下拉选中变化 → 交给 ViewModel(它会决定要不要自动加载一次)。</summary>
     private void Source_SelectionChanged(object sender, SelectionChangedEventArgs e)

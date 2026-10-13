@@ -24,4 +24,10 @@ public sealed class UnavailableWslcCli : IWslcCli
         Action<string>? onStdoutLine,
         CancellationToken cancellationToken = default)
         => Task.FromException<WslcCliResult>(new WslcCliUnavailableException(_message));
+
+    public Task<WslcCliResult> RunWithConsoleAsync(
+        IReadOnlyList<string> arguments,
+        Action<IReadOnlyList<string>>? onVisibleLines,
+        CancellationToken cancellationToken = default)
+        => Task.FromException<WslcCliResult>(new WslcCliUnavailableException(_message));
 }

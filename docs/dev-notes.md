@@ -325,3 +325,48 @@ mirror 相关的键名。也就是说 Docker 那个 `daemon.json → registry-mi
 它的 UIA `Name` 是 PlaceholderText,所以判断"框里到底是什么"要看 `Value` 而不是 `Name`。
 另外 `NavigationView` 的导航项要用 `SelectionItemPattern.Select()`(`ListItemPattern` 这个类型
 在 .NET 的 UIAutomation 里不存在,别照着旧名字写)。
+
+## 28. ConPTY 的输入写端提前关闭 = 向子进程广播 Ctrl+C
+
+**症状**:第一次给 `wslc pull` 挂伪终端,子进程一帧都没画就退场,退出码 `0xC000013A`
+(STATUS_CONTROL_C_EXIT),屏幕上什么都没有,看着像"伪终端根本不工作"。
+
+**真相**:`CreatePseudoConsole` 的输入管道有两个句柄(读端给 ConPTY,写端在我们手里)。
+写完 STARTUPINFO 就把写端关掉看着很合理 —— 但 ConPTY 认为"所有输入写端都关了 = 终端已断开",
+于是向挂在伪控制台上的**整个进程树**广播一次 Ctrl+C。`wslc` 收到就自杀,连第一帧都来不及输出。
+
+**做法**:输入写端一路留着,只在 `Dispose` 里关。我们本来就不往 stdin 写东西,
+子进程不会"卡在等输入"上(它退出时管道另一端自然没人读)。
+取消与收尾靠 `KillTree()` + `CloseConsole()`:关掉伪控制台让输出写端全部关闭,后台读线程才拿得到 EOF,
+不会留下一个挂死的读任务。这条路径任何单测都盖不到(单测走假 CLI),
+所以真机门禁项 `PullWithProgressAsync_OnRealWslc_StreamsScreenThroughThePseudoTerminal`
+专门钉它 —— 断言"至少回调过一帧",子进程启动即被杀时这条断言必红。
+
+## 29. 父进程的标准句柄会盖掉伪控制台,子进程根本没挂上去
+
+**症状**:同一段代码,在资源管理器里双击启动应用时进度实时上屏;
+一旦从管道/终端里启动(`dotnet test`、`pwsh -Command`、重定向了 stdout 的脚本),
+伪终端一帧都收不到 —— 就是用户报的"只有转圈"。
+
+**真相**:`CreateProcess` 会把父进程**当时的** STD_INPUT/STD_OUTPUT/STD_ERROR 句柄继承给子进程,
+这个继承的优先级高于 `PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE`。
+父进程的 std 句柄是管道时,子进程拿到的就是那个管道:它认为自己不在终端里,
+于是走"全部攒到进程退出才一次性冲刷"的老路(功能 004 的实测表记的就是这条),ConPTY 白挂了。
+
+**做法**:`StartInternal` 里在 `CreateProcess` 之前用 `SetStdHandle` 把三个标准句柄临时置零,
+调用一返回立刻在 `finally` 里还原(只影响这一次 `CreateProcess` 的继承,不动父进程自己的控制台)。
+验证方式:同一个门禁测试分别在**非 tty**与 **tty** 两种宿主下跑,并且观察 wslc 的输出
+**不再泄漏到父终端** —— 泄漏就说明子进程挂的还是父进程那个终端。
+
+## 30. 分层进度只按"当前帧"求和,"已下载"会倒退
+
+**症状**:真机拉 nginx 时汇总行出现 `1.6 MB → 545.6 kB → 0 B`,数字往回跳。
+
+**真相**:wslc 只在 `Downloading` / `Extracting` 这两种状态后面写字节数;
+某层一旦变成 `Download complete`(乃至 `Pull complete`),屏幕上那一行就**不再带字节**了。
+"当前帧里所有层的字节数之和"因此会随层数完成而缩水,最后一层完成时直接归零。
+
+**做法**:解析时带一份"每层历史最大字节数"的台账(`WslcPullProgress.Parse(lines, ledger)`),
+每帧只把该层的最大值写回去,汇总取台账之和 —— 只增不减。台账属于**一次拉取**:
+`ImagesPageViewModel.Begin()` 里必须清空(和进度行、去重记忆一起),
+否则第二趟的"已下载"会从上一趟的数字接着涨。累计在后台读线程、清空在 UI 线程,两边共用一把锁。

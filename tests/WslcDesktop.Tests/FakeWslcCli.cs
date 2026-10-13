@@ -17,6 +17,12 @@ public sealed class FakeWslcCli : IWslcCli
 
     public List<IReadOnlyList<string>> StreamCalls { get; } = new();
 
+    /// <summary>伪终端路径的接管者(功能 011):用它制造"进度一帧一帧到达"的场景。</summary>
+    public Func<IReadOnlyList<string>, Action<IReadOnlyList<string>>?, CancellationToken, Task<WslcCliResult>>? ConsoleHandler { get; set; }
+
+    /// <summary>只记录走伪终端的调用。</summary>
+    public List<IReadOnlyList<string>> ConsoleCalls { get; } = new();
+
     public FakeWslcCli Enqueue(int exitCode, string stdout = "", string stderr = "")
     {
         _scriptedResults.Enqueue(new WslcCliResult(exitCode, stdout, stderr));
@@ -74,6 +80,35 @@ public sealed class FakeWslcCli : IWslcCli
         {
             onStdoutLine?.Invoke(line);
         }
+        return Task.FromResult(result);
+    }
+
+    /// <summary>
+    /// 伪终端路径(功能 011)。默认行为与真实现同构:结果照脚本走,屏幕行一次性回调 ——
+    /// 差别只在真实现是"边渲染边回调",这里由 ConsoleHandler 制造中途的帧。
+    /// </summary>
+    public Task<WslcCliResult> RunWithConsoleAsync(
+        IReadOnlyList<string> arguments,
+        Action<IReadOnlyList<string>>? onVisibleLines,
+        CancellationToken cancellationToken = default)
+    {
+        Calls.Add(arguments);
+        ConsoleCalls.Add(arguments);
+
+        if (ConsoleHandler is not null)
+        {
+            return ConsoleHandler(arguments, onVisibleLines, cancellationToken);
+        }
+
+        if (_scriptedStreams.Count > 0)
+        {
+            var (exitCode, lines, stderr) = _scriptedStreams.Dequeue();
+            onVisibleLines?.Invoke(lines);
+            return Task.FromResult(new WslcCliResult(exitCode, string.Join("\n", lines), stderr));
+        }
+
+        var result = _scriptedResults.Count > 0 ? _scriptedResults.Dequeue() : _fallback;
+        onVisibleLines?.Invoke(WslcLogText.Split(result.StdOut));
         return Task.FromResult(result);
     }
 }

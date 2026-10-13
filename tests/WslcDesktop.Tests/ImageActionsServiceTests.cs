@@ -303,12 +303,120 @@ public class ImageActionsServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.TagAsync(MirrorRef, PlainRef));
         Assert.Equal(new[] { "tag", MirrorRef, PlainRef }, cli.LastArguments);
     }
+    // ---------- 功能 011 · 带实时进度的拉取 ----------
+
+    [Fact]
+    public async Task PullWithProgressAsync_InvokesWslcPullThroughTheConsoleWithTrimmedReference()
+    {
+        var cli = new FakeWslcCli().Enqueue(0, FixtureLoader.Read("wslc-pull-uptodate.txt"));
+        var service = new ImagesService(cli);
+
+        await service.PullWithProgressAsync($"  {BusyBoxRef}  ");
+
+        // AC1:参数与旧 PullAsync 逐字一致,只是换了输出口(伪终端)
+        var args = Assert.Single(cli.ConsoleCalls);
+        Assert.Equal(new[] { "pull", BusyBoxRef }, args);
+    }
+
+    [Fact]
+    public async Task PullWithProgressAsync_HandsTheWholeScreenToTheCallbackOnce()
+    {
+        var pullOut = FixtureLoader.Read("wslc-pull-new.txt");
+        var cli = new FakeWslcCli().Enqueue(0, pullOut);
+        var service = new ImagesService(cli);
+        var frames = new List<IReadOnlyList<string>>();
+
+        await service.PullWithProgressAsync(BusyBoxRef, frames.Add);
+
+        // 没有中途帧时(普通管道回退,AC5):结束时一次性交出全部屏幕行,内容就是这次拉取的输出
+        var frame = Assert.Single(frames);
+        Assert.Contains("ecc510c1e359: Pull complete", frame);
+        Assert.Contains("Status: Downloaded newer image for docker.1ms.run/library/nginx:latest", frame);
+    }
+
+    [Fact]
+    public async Task PullWithProgressAsync_StreamsEveryFrameAsItArrives()
+    {
+        var cli = new FakeWslcCli();
+        var service = new ImagesService(cli);
+        var frames = new List<IReadOnlyList<string>>();
+        cli.ConsoleHandler = (arguments, onVisibleLines, cancellationToken) =>
+        {
+            // 真机形态:同一块屏幕被反复推上来,每次都是"此刻可见的全部行",不是增量
+            onVisibleLines?.Invoke(["latest: Pulling from library/busybox", "ecc510c1e359: Pulling fs layer"]);
+            onVisibleLines?.Invoke(["latest: Pulling from library/busybox", "ecc510c1e359: Pull complete"]);
+            return Task.FromResult(new WslcCliResult(0, FixtureLoader.Read("wslc-pull-new.txt"), ""));
+        };
+
+        await service.PullWithProgressAsync(BusyBoxRef, frames.Add);
+
+        Assert.Equal(2, frames.Count);
+        Assert.Equal("ecc510c1e359: Pulling fs layer", frames[0][1]);
+        Assert.Equal("ecc510c1e359: Pull complete", frames[1][1]);
+    }
+
+    [Fact]
+    public async Task PullWithProgressAsync_ReturnsTheSameResultAsPlainPull()
+    {
+        var pullOut = FixtureLoader.Read("wslc-pull-new.txt");
+        var plain = await new ImagesService(new FakeWslcCli().Enqueue(0, pullOut)).PullAsync(BusyBoxRef);
+        var progressFrames = 0;
+        var streamed = await new ImagesService(new FakeWslcCli().Enqueue(0, pullOut))
+            .PullWithProgressAsync(BusyBoxRef, _ => progressFrames++);
+
+        // AC7:换了输出口不能换结论
+        Assert.Equal(plain.Reference, streamed.Reference);
+        Assert.Equal(plain.IsUpToDate, streamed.IsUpToDate);
+        Assert.Equal(plain.Notice, streamed.Notice);
+        Assert.Equal(1, progressFrames);
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData(null)]
+    public async Task PullWithProgressAsync_EmptyReference_ThrowsWithoutStartingProcess(string? reference)
+    {
+        var cli = new FakeWslcCli();
+        var service = new ImagesService(cli);
+
+        await Assert.ThrowsAsync<ArgumentException>(() => service.PullWithProgressAsync(reference!));
+
+        Assert.Empty(cli.Calls);
+    }
+
+    [Fact]
+    public async Task PullWithProgressAsync_NonZeroExit_ThrowsWithPullCommandAndErrorText()
+    {
+        var cli = new FakeWslcCli().Enqueue(1, "", PullFailureStdErr);
+        var service = new ImagesService(cli);
+
+        var ex = await Assert.ThrowsAsync<WslcCliException>(() => service.PullWithProgressAsync(BusyBoxRef));
+
+        Assert.Equal("wslc pull", ex.Command);
+        Assert.Contains("E_FAIL", ex.Message);
+    }
+
+    [Fact]
+    public async Task PullWithProgressAsync_Cancellation_IsPropagated()
+    {
+        var cli = new CancellingCli();
+        var service = new ImagesService(cli);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(
+            () => service.PullWithProgressAsync(BusyBoxRef, null, CancellationToken.None));
+        Assert.Equal(new[] { "pull", BusyBoxRef }, cli.LastArguments);
+    }
     /// <summary>模拟进程已经启动、但中途被取消(AC6 里取消拉取的底层形态)。</summary>
     private sealed class CancellingCli : IWslcCli
     {
         public IReadOnlyList<string>? LastArguments { get; private set; }
 
         public Task<WslcCliResult> RunLinesAsync(IReadOnlyList<string> arguments, Action<string>? onStdoutLine, CancellationToken cancellationToken = default) =>
+            RunAsync(arguments, cancellationToken);
+
+        // 这些闸门假 CLI 只关心"调用有没有挂起",用不到实时上屏,所以伪终端路径同样转给一次性实现。
+        public Task<WslcCliResult> RunWithConsoleAsync(IReadOnlyList<string> arguments, Action<IReadOnlyList<string>>? onVisibleLines, CancellationToken cancellationToken = default) =>
             RunAsync(arguments, cancellationToken);
 
         public Task<WslcCliResult> RunAsync(IReadOnlyList<string> arguments, CancellationToken cancellationToken = default)
