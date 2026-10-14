@@ -5,6 +5,7 @@ using Windows.ApplicationModel.DataTransfer;
 using WslcDesktop.Core;
 using WslcDesktop.Core.I18n;
 using WslcDesktop.Core.Models;
+using WslcDesktop.Core.Services;
 using WslcDesktop.Core.ViewModels;
 using WslcDesktop.Services;
 using WslcDesktop.Ui;
@@ -36,7 +37,8 @@ public sealed partial class RunBuilderPage : Page
         ViewModel = new RunBuilderPageViewModel(
             AppServices.Containers,
             AppServices.Images,
-            new DispatcherUiThread(DispatcherQueue));
+            new DispatcherUiThread(DispatcherQueue),
+            AppServices.RunHistory);
 
         // 静态文案的绑定源:页面 DataContext 指向 Localizer(功能 009 的约定)。
         DataContext = Localizer.Default;
@@ -144,6 +146,15 @@ public sealed partial class RunBuilderPage : Page
         {
             App.Log("复制到剪贴板失败: " + ex);
             ViewModel.MarkCopyFailed();
+        }
+    }
+
+    /// <summary>把一条历史命令填回表单(功能 012 补强);行对象挂在模板的 DataContext 上。</summary>
+    private void RestoreFromHistory_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: RunHistoryEntry entry })
+        {
+            ViewModel.RestoreFromHistory(entry);
         }
     }
 

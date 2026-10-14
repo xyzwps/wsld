@@ -264,6 +264,14 @@ public static class StringTables
             ["run.error.label-key"] = "标签第 {0} 行:键名不能为空,也不能带 = 号。",
             ["run.error.health-retries"] = "健康检查的重试次数需要是整数。",
             ["run.error.cpus"] = "CPU 数需要是数字,例如 0.5、1、2.5。",
+            ["run.clear"] = "清空",
+            ["run.clear.tooltip"] = "一键清空整张表单,回到初始状态",
+            ["run.history.title"] = "执行历史",
+            ["run.history.empty"] = "还没有就地执行过命令。执行过的命令按最新在前留在这里,最多 100 条。",
+            ["run.history.restore.tooltip"] = "把这条命令填回表单,继续编辑",
+            ["run.history.clear.tooltip"] = "清空执行历史",
+            ["run.restored"] = "已从执行历史读回命令,可以继续在表单里改。",
+            ["run.restore.busy"] = "正在执行,先取消或等它跑完再恢复历史。",
         };
 
     /// <summary>英文;系统语言不是中文时用它(功能 009 · AC5 的 fallback)。</summary>
@@ -512,5 +520,13 @@ public static class StringTables
             ["run.error.label-key"] = "Label row {0}: the key cannot be empty or contain =.",
             ["run.error.health-retries"] = "Health check retries must be a whole number.",
             ["run.error.cpus"] = "CPUs must be a number, e.g. 0.5, 1, 2.5.",
+            ["run.clear"] = "Clear",
+            ["run.clear.tooltip"] = "Wipe the whole form back to its initial state in one click",
+            ["run.history.title"] = "Run history",
+            ["run.history.empty"] = "No in-place runs yet. Commands you run are kept here, newest first, up to 100.",
+            ["run.history.restore.tooltip"] = "Fill this command back into the form and keep editing",
+            ["run.history.clear.tooltip"] = "Clear the run history",
+            ["run.restored"] = "Command restored from the run history; keep editing it here.",
+            ["run.restore.busy"] = "A run is in progress - cancel it or wait before restoring history.",
         };
 }

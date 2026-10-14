@@ -207,6 +207,77 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    public void ClearForm_ResetsEverythingBackToInitialState()
+    {
+        var (vm, _) = NewPage();
+        vm.Spec.Image = "nginx";
+        vm.Spec.Name = "web";
+        vm.AddPortCommand.Execute(null);
+        vm.Spec.Ports[0].HostPort = "8080";
+        vm.Spec.Ports[0].ContainerPort = "80";
+        vm.MarkCopyFailed();
+
+        vm.ClearFormCommand.Execute(null);
+
+        Assert.Equal("wslc run -d", vm.GeneratedCommand);
+        Assert.Equal("", vm.Spec.Image);
+        Assert.Empty(vm.Spec.Ports);
+        Assert.False(vm.HasError);
+        Assert.False(vm.HasNotice);
+        Assert.Equal("", vm.OutputText);
+    }
+
+    [Fact]
+    public async Task Execute_RecordsHistoryNewestFirst_AndSkipsConsecutiveDuplicates()
+    {
+        var (vm, cli) = NewPage();
+        cli.EnqueueStream(0, "abc123\n");
+        vm.Spec.Image = "hello-world";
+
+        await vm.ExecuteCommand.ExecuteAsync(null);
+        await vm.ExecuteCommand.ExecuteAsync(null);
+        Assert.Single(vm.History.Entries);
+
+        vm.Spec.Image = "nginx";
+        await vm.ExecuteCommand.ExecuteAsync(null);
+
+        Assert.Equal(2, vm.History.Entries.Count);
+        Assert.Equal("wslc run -d nginx", vm.History.Entries[0].Command);
+        Assert.True(vm.HasHistory);
+    }
+
+    [Fact]
+    public void RestoreFromHistory_FillsTheFormAndAnnouncesIt()
+    {
+        var history = new RunHistory();
+        var cli = new RoutingWslcCli();
+        var vm = new RunBuilderPageViewModel(new ContainersService(cli), new ImagesService(cli), uiThread: null, history);
+        history.Record("wslc run -d --name web -p 8080:80/udp nginx");
+
+        vm.RestoreFromHistory(history.Entries[0]);
+
+        Assert.Equal("nginx", vm.Spec.Image);
+        Assert.Equal("web", vm.Spec.Name);
+        Assert.Equal("udp", Assert.Single(vm.Spec.Ports).Protocol);
+        Assert.False(vm.HasValidationIssues);
+        Assert.Contains("已从执行历史读回命令", vm.Notice);
+    }
+
+    [Fact]
+    public void RunHistory_KeepsAtMostCapacityEntries()
+    {
+        var history = new RunHistory();
+
+        for (var i = 0; i < RunHistory.Capacity + 5; i++)
+        {
+            history.Record($"wslc run -d img{i}");
+        }
+
+        Assert.Equal(RunHistory.Capacity, history.Entries.Count);
+        Assert.Equal($"wslc run -d img{RunHistory.Capacity + 4}", history.Entries[0].Command);
+    }
+
+    [Fact]
     public async Task RefreshImages_PopulatesTaggedReferencesOnly_AndSurvivesFailure()
     {
         var (vm, cli) = NewPage();

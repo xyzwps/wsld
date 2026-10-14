@@ -14,6 +14,9 @@ public static class AppServices
     public static ContainersService Containers { get; } = new(WslcCli);
     public static ImagesService Images { get; } = new(WslcCli);
 
+    /// <summary>就地执行历史(功能 012 补强):全局一份,切语言重建命令编排页时历史不丢。</summary>
+    public static RunHistory RunHistory { get; } = new();
+
     /// <summary>wslc.exe 的完整路径,用于状态栏展示;未找到时为 null。</summary>
     public static string? WslcPath => WslcLocator.Find();
 

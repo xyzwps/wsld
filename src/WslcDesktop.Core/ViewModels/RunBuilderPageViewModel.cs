@@ -30,15 +30,23 @@ public sealed partial class RunBuilderPageViewModel : ObservableObject
     private CancellationTokenSource? _execCts;
     private bool _suspendRebuild;
 
-    public RunBuilderPageViewModel(ContainersService containers, ImagesService images, IUIThread? uiThread = null)
+    public RunBuilderPageViewModel(
+        ContainersService containers,
+        ImagesService images,
+        IUIThread? uiThread = null,
+        RunHistory? history = null)
     {
         _containers = containers;
         _images = images;
         _uiThread = uiThread;
+        History = history ?? new RunHistory();
+        History.Entries.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasHistory));
 
         ExecuteCommand = new AsyncRelayCommand(ExecuteAsync, () => CanExecute);
         CancelCommand = new RelayCommand(Cancel, () => IsBusy);
         RefreshImagesCommand = new AsyncRelayCommand(RefreshImagesAsync);
+        ClearFormCommand = new RelayCommand(ClearForm, () => !IsBusy);
+        ClearHistoryCommand = new RelayCommand(History.Clear);
 
         AddPortCommand = new RelayCommand(() => Spec.Ports.Add(new PortRow()));
         AddVolumeCommand = new RelayCommand(() => Spec.Volumes.Add(new VolumeRow()));
@@ -53,12 +61,20 @@ public sealed partial class RunBuilderPageViewModel : ObservableObject
     /// <summary>表单的全部状态;页面直接绑定它的属性,改动即时反映到生成的命令。</summary>
     public RunSpec Spec { get; } = new();
 
+    /// <summary>就地执行历史(功能 012 补强);实例由外部注入,切语言重建页面时历史跟着续上。</summary>
+    public RunHistory History { get; }
+
+    /// <summary>历史卡片显示列表还是空态提示。</summary>
+    public bool HasHistory => History.Entries.Count > 0;
+
     /// <summary>本机镜像引用,给镜像下拉框当候选;拉不到不报错(它只是便利,不是功能本身)。</summary>
     public ObservableCollection<string> ImageReferences { get; } = new();
 
     public IAsyncRelayCommand ExecuteCommand { get; }
     public IRelayCommand CancelCommand { get; }
     public IAsyncRelayCommand RefreshImagesCommand { get; }
+    public IRelayCommand ClearFormCommand { get; }
+    public IRelayCommand ClearHistoryCommand { get; }
 
     public IRelayCommand AddPortCommand { get; }
     public IRelayCommand AddVolumeCommand { get; }
@@ -177,6 +193,9 @@ public sealed partial class RunBuilderPageViewModel : ObservableObject
     {
         if (Interlocked.CompareExchange(ref _executionActive, 1, 0) != 0) return;
 
+        // 按下执行就记录,不问成败:用户要的正是"跑过的那条",失败了更要能找回。
+        History.Record(GeneratedCommand);
+
         var cts = new CancellationTokenSource();
         _execCts = cts;
 
@@ -246,6 +265,7 @@ public sealed partial class RunBuilderPageViewModel : ObservableObject
         OnPropertyChanged(nameof(CanCopy));
         ExecuteCommand.NotifyCanExecuteChanged();
         CancelCommand.NotifyCanExecuteChanged();
+        ClearFormCommand.NotifyCanExecuteChanged();
     }
 
     private void Cancel() => _execCts?.Cancel();
@@ -360,6 +380,44 @@ public sealed partial class RunBuilderPageViewModel : ObservableObject
     {
         target.Clear();
         foreach (var row in source) target.Add(row);
+    }
+
+    // ---- 清空 / 历史恢复 ----
+
+    /// <summary>一键清空:表单回到出厂状态(后台运行仍勾着),输出与提示也一并抹掉。</summary>
+    private void ClearForm()
+    {
+        ApplyParsed(new RunSpec());
+        Error = null;
+        HasError = false;
+        Notice = "";
+        HasNotice = false;
+        lock (_outputLock) _outputBuffer.Clear();
+        OutputText = "";
+    }
+
+    /// <summary>把一条历史命令填回表单继续改;走的是与剪贴板读回同一条解析路径。</summary>
+    public void RestoreFromHistory(RunHistoryEntry? entry)
+    {
+        if (entry is null) return;
+
+        if (IsBusy)
+        {
+            HasNotice = true;
+            Notice = T("run.restore.busy");
+            return;
+        }
+
+        if (!RunCommandBuilder.TryParse(entry.Command, out var parsed) || parsed is null)
+        {
+            HasError = true;
+            Error = T("run.import.failed");
+            return;
+        }
+
+        ApplyParsed(parsed);
+        HasNotice = true;
+        Notice = T("run.restored");
     }
 
     // ---- 镜像候选 ----
