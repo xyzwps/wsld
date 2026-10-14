@@ -27,7 +27,7 @@
 - `WslcDesktop.Tests`:xUnit
 
 ## 构建与运行
-装了 [just](https://github.com/casey/just) 的话,仓库根目录的 `justfile` 里有快捷命令:`just dev`(编译并启动应用)、`just test`(单元测试)、`just itest`(真机冒烟)、`just kill` / `just clean`;`just --list` 看全部。
+装了 [just](https://github.com/casey/just) 的话,仓库根目录的 `justfile` 里有快捷命令:`just dev`(编译并启动应用)、`just test`(单元测试)、`just itest`(真机冒烟)、`just kill` / `just clean`、`just package`(打安装包)、`just verify-installer`(安装包自检);`just --list` 看全部。
 
 ```powershell
 dotnet build WslcDesktop.sln
@@ -35,6 +35,20 @@ dotnet test  WslcDesktop.sln
 dotnet run --project src/WslcDesktop   # 启动桌面应用
 ```
 要求:Windows 11 + 已安装 WSL 3(含 `wslc.exe`,默认位于 `C:\Program Files\WSL\wslc.exe`)。
+
+## 打安装包(交付给客户)
+
+```powershell
+just package                # 产物:artifacts\installer\WSLC-Desktop-Setup-<版本>-x64.exe,旁边有同名 .sha256
+just package -Version 1.2.0 -Publisher "某某公司"
+just verify-installer       # 自检:静默安装 -> 启动 -> 卸载 -> 查残留,全绿才交付
+```
+
+客户机拿到的是一个 setup.exe:中文向导,包里已经带上 .NET 运行时、Windows App SDK 和 VC++ 运行库,**客户机不需要预装任何东西**(要求 Windows 10 19041 起;实际用还需要本机已装 WSL 3)。没有管理员权限的机器可以选"只为我安装"。
+
+- 版本号只写一处:`src/WslcDesktop/WslcDesktop.csproj` 里的 `<Version>`,`just package` 会读它,`-Version` 临时覆盖。
+- 构建机需要 [Inno Setup 6](https://jrsoftware.org/isdl.php):`winget install JRSoftware.InnoSetup`。
+- 方案选择、图标、代码签名/SmartScreen、常见问题见 [docs/release-packaging.md](docs/release-packaging.md)。
 
 ## 端到端冒烟测试(可选)
 默认 `dotnet test` 只跑不依赖真实 `wslc` 的单元测试(405 个)。

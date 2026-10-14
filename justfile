@@ -37,3 +37,22 @@ kill:
 # 清理编译产物(交给 dotnet 自己做,不手动删目录)
 clean:
     @dotnet clean {{sln}} --nologo; "已清理编译产物"
+
+# 需要 Inno Setup 6:winget install JRSoftware.InnoSetup
+# 参数原样透传给 tools/package.ps1,例如:just package -Version 1.2.0 -Publisher "某某公司"
+# 不写 -Version 就用 csproj 里的 <Version>
+# 打安装包:自包含发布 + Inno Setup 编译,产物在 artifacts\installer\*.exe
+package *args:
+    @powershell -NoProfile -ExecutionPolicy Bypass -File tools\package.ps1 {{args}}
+
+# 只发布(生成 artifacts\publish 目录),不打安装包
+publish:
+    @powershell -NoProfile -ExecutionPolicy Bypass -File tools\package.ps1 -NoInstaller
+
+# 重新生成应用图标 assets\app.ico(改了 tools\make-icon.ps1 之后跑)
+icon:
+    @powershell -NoProfile -ExecutionPolicy Bypass -File tools\make-icon.ps1
+# 加 -KeepInstalled 装完不卸载,方便手工点一遍界面
+# 安装包自检:静默安装 -> 启动 -> 卸载 -> 查残留(只装给当前用户,不需要管理员)
+verify-installer *args:
+    @powershell -NoProfile -ExecutionPolicy Bypass -File tools\verify-installer.ps1 {{args}}

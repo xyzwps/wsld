@@ -6,3 +6,6 @@ TestResults/
 artifacts/
 capture.png
 /*.png
+
+# 图标生成时留下的人工核对截图,不入库
+assets/preview.png
