@@ -1,3 +1,4 @@
+using System.Runtime.InteropServices;
 using Microsoft.UI.Windowing;
 using Windows.Graphics;
 using Microsoft.UI.Xaml;
@@ -171,7 +172,7 @@ public sealed partial class MainWindow : Window
         var loc = Localizer.Default;
         SetNavItem(Nav.MenuItems[0], "nav.containers", loc);
         SetNavItem(Nav.MenuItems[1], "nav.images", loc);
-        SetNavItem(Nav.MenuItems[2], "nav.logs", loc);
+        SetNavItem(Nav.MenuItems[2], "nav.run", loc); // 功能 012:命令编排
         SetNavItem(Nav.FooterMenuItems[0], "nav.settings", loc);
 
         ToolTipService.SetToolTip(PaneToggle, loc.Get("nav.toggle"));
@@ -193,7 +194,7 @@ public sealed partial class MainWindow : Window
     private static string PageKeyToNavKey(string key) => key switch
     {
         "images" => "nav.images",
-        "logs" => "nav.logs",
+        "run" => "nav.run",
         "settings" => "nav.settings",
         _ => "nav.containers",
     };
@@ -255,16 +256,15 @@ public sealed partial class MainWindow : Window
     private static Page CreatePage(string key) => key switch
     {
         "images" => new ImagesPage(),
-        "logs" => new LogsPage(),
+        "run" => new RunBuilderPage(),
         "settings" => new SettingsPage(),
         _ => new ContainersPage(),
     };
 
     /// <summary>
     /// 换语言后重建页面:静态文案烧在页面里,只能整页重来(搜索条件会一起丢)。
-    /// 两件事必须排队到下一帧:一是语言单选按钮的 Checked 事件还在调用栈上,
-    /// 当场把整棵可视树拆掉不安全;二是日志页正在跟随时得先把 wslc 收回来,
-    /// 不能留下一个没人看的孤儿进程一直读下去。
+    /// 必须排队到下一帧:语言单选按钮的 Checked 事件还在调用栈上,
+    /// 当场把整棵可视树拆掉不安全。
     /// </summary>
     private void RebuildPages()
     {
@@ -280,26 +280,33 @@ public sealed partial class MainWindow : Window
     private void RebuildPagesCore()
     {
         var key = _currentKey;
-        if (_current is LogsPage logs && logs.ViewModel.IsFollowing)
-        {
-            logs.ViewModel.CancelFollow();
-        }
 
         _pages.Clear();
         _current = null;
         Show(key);
     }
 
+    // 尺寸意图一律写成 DIP,再按窗口 DPI 换算后交给 AppWindow —— 它只认物理像素(dev-notes §5)。
+    // 容器页左栏是固定 420,右栏详情最少还要 ~400:窗口开小了,详情就会被裁掉半截。
+    private const int WindowWidthDip = 1180;
+    private const int WindowHeightDip = 780;
+    private const int WindowMinWidthDip = 1000;
+    private const int WindowMinHeightDip = 640;
+
     private void ConfigureWindow()
     {
         try
         {
+            var scale = WindowScale;
             var appWindow = AppWindow;
-            appWindow.Resize(new SizeInt32(1180, 780));
+            appWindow.Resize(new SizeInt32((int)(WindowWidthDip * scale), (int)(WindowHeightDip * scale)));
             if (appWindow.Presenter is OverlappedPresenter presenter)
             {
                 presenter.IsMaximizable = true;
                 presenter.IsResizable = true;
+                // 最小尺寸这一对直接收 DIP,不用自己乘缩放。
+                presenter.PreferredMinimumWidth = WindowMinWidthDip;
+                presenter.PreferredMinimumHeight = WindowMinHeightDip;
             }
             appWindow.Move(new PointInt32(80, 60));
         }
@@ -308,4 +315,26 @@ public sealed partial class MainWindow : Window
             App.Log("ConfigureWindow failed: " + ex);
         }
     }
+
+    /// <summary>窗口所在显示器的缩放比。构造函数里 XamlRoot.RasterizationScale 还没准备好(实测恒为 1),
+    /// 只能直接问 Win32 要这个窗口句柄的 DPI —— AppWindow.Id.Value 就是 HWND。</summary>
+    private double WindowScale
+    {
+        get
+        {
+            try
+            {
+                var dpi = GetDpiForWindow((nint)AppWindow.Id.Value);
+                return dpi > 0 ? dpi / 96d : 1d;
+            }
+            catch (Exception ex)
+            {
+                App.Log("WindowScale failed: " + ex);
+                return 1d;
+            }
+        }
+    }
+
+    [DllImport("user32.dll")]
+    private static extern uint GetDpiForWindow(IntPtr hwnd);
 }

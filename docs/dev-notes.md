@@ -370,3 +370,135 @@ mirror 相关的键名。也就是说 Docker 那个 `daemon.json → registry-mi
 每帧只把该层的最大值写回去,汇总取台账之和 —— 只增不减。台账属于**一次拉取**:
 `ImagesPageViewModel.Begin()` 里必须清空(和进度行、去重记忆一起),
 否则第二趟的"已下载"会从上一趟的数字接着涨。累计在后台读线程、清空在 UI 线程,两边共用一把锁。
+
+## 31. 星号列不是"等分",它至少要有内容那么宽
+
+**症状**:容器页改成"左列表 + 右详情"两栏后,窗口一窄,左栏就赖在 ~760 DIP 不肯缩,
+右栏被挤到只剩两三百像素,详情整块看不见。
+
+**真相**:`ColumnDefinition Width="*"` 的下限不是 0,而是**内容的期望宽度**。
+左栏工具栏(搜索框 + 开关 + 下拉)和行内五个图标按钮把这一列顶到 700 多 DIP,
+星号只能"往上加",永远不会"往下减"。想要真正定宽的侧栏,只能写死像素宽、列本身用 `Auto`。
+
+**做法**:根栅格 `Auto,Auto,*`,左栏 `Grid Width="420"`。420 塞不下一整行工具栏就拆两行
+(搜索+刷新 / 过滤+间隔);`ToggleSwitch` 默认 `MinWidth=154`(见 §18)、`ComboBox` 默认更宽,
+都要显式压成 0 或定值;下拉框的 `Header` 挪走之后用 `AutomationProperties.Name` 把可读名字补回来。
+
+## 32. 窗口尺寸:AppWindow 只认物理像素,而 RasterizationScale 在构造期恒为 1
+
+**症状**:左栏定宽 420 之后,默认窗口在 150% 缩放的屏上只开到巴掌大,详情又被裁掉 —— 1180 被当成了物理像素。
+
+**做法 / 坑**:`AppWindow.Resize` 收**物理像素**,按 DIP 设计就要自己乘缩放;
+但 `XamlRoot.RasterizationScale` 在 `MainWindow` 构造函数和第一次 `Activated` 里实测都是 1,不能用,
+直接问 Win32 —— `GetDpiForWindow(AppWindow.Id.Value) / 96`(`AppWindow` 没有 `HWND` 属性,`Id.Value` 就是 HWND)。
+最小尺寸走 `OverlappedPresenter.PreferredMinimumWidth/Height`,**这一对收 DIP**;
+Windows App SDK 2.5.1 里没有 `SetMinSize`。
+
+## 33. `BoolToVis` 只认真 bool,把对象丢进去永远得到 Collapsed
+
+**症状**:点容器行的 ℹ,日志确认 `DetailButton_Click` → `ShowDetail` 跑完且没抛异常,
+右栏却还是"点击左侧容器的 ℹ 按钮查看详情"。
+
+**真相**:`Visibility="{x:Bind DetailViewModel, Converter={StaticResource BoolToVis}}"`,
+转换器里是 `value is bool b && b`,传对象永远是 false。空状态那行带 `ConverterParameter=invert` 反而一直 Visible,
+于是"坏了"被伪装成"还没点到"。
+
+**做法**:页面开一个 `public bool HasDetail => DetailViewModel is not null;`,四处 Visibility 全绑它。
+别往转换器里塞 null 语义:所有传 bool 的调用点会跟着一起变味。
+
+## 34. 整行可点 = 选中即详情,但自动刷新会把选中项冲掉
+
+**症状**:容器详情原先挂在行尾的 ℹ 按钮上。定宽 420 的左栏里那一行本来就有四个图标按钮
+(§31),再加一个是真的挤;而"点整行看详情"这件事 ListView 并不默认提供。
+
+**做法**:去掉按钮,列表改成 `SelectionMode="Single"` + `SelectionChanged`,选中哪一行就加载哪一行的详情。
+原来的 ℹ 提示挪到整行的 `ToolTipService.ToolTip` 上,鼠标停上去还是能看到"查看详情"。
+空状态文案跟着改成"点击左侧的容器查看详情"。
+
+**别用 `IsItemClickEnabled` + `ItemClick`**:它要求 `SelectionMode="None"`,代价是没有选中高亮 ——
+右栏显示的是哪个容器只能靠记,自动刷新把行重排之后连"我刚点了谁"都找不回来。
+选中高亮本身就是这个交互的说明书。
+
+**实测结论**:行内那几个图标按钮**不会**连带选中整行 —— `ButtonBase` 吃掉了 `PointerPressed`。
+点删除时确认框弹出,选中行和右栏详情纹丝不动。所以不需要任何"点按钮别切换选中"的补丁;
+真要有这个顾虑,靠的是这个既有行为,不是运气。
+
+**必须处理的坑**:
+
+- 列表按 ID 复用行对象,但容器状态一变就重新排序、搜索词一变就过滤,`Rebuild()` 是整批 `Items.Clear()`
+  → ListView 把 `SelectedItem` 清成 `null`,而右栏还在显示那个容器,高亮和详情从此各说各话。
+  在 `Items.CollectionChanged` 里按 `DetailViewModel.ContainerId` 把选中项放回去(`RestoreSelection`),
+  并用 `_restoringSelection` 挡住这次回调 —— 它不算用户点击,否则等于凭空重载一次详情、还把滚动条拽走。
+- `ScrollIntoView` 传 `e.AddedItems[0]`,也就是数据项本身。
+  **不要**写成 `Items[e.AddedItems.Count - 1]`:单选模式下 `AddedItems` 永远只有一个元素,下标恒为 0,
+  于是每次点击都滚到第一行。也别用 `SelectedItem` —— 它可能还是 `RestoreSelection` 刚放回去的旧那一行。
+- 顺手两处:换容器之前 `DetachDetail()` 摘掉旧详情对象的三个订阅,否则每点一行就在页面上漏一个;
+  重复点同一行直接 return,不然右栏白闪一下,自动刷新还可能把选中项弄丢。
+## 35. WinUI 3 的 ComboBox 没有 TextChanged,可编辑下拉要上 AutoSuggestBox
+
+**症状**:镜像字段想做成"能打字也能从本机镜像里选"的形态,XAML 里给 ComboBox 挂 `TextChanged`
+→ WMC0011,提示找不到成员。WinUI 3 根本没有可编辑 ComboBox(那是 WPF 的 `IsEditable`),
+非 SelectedItem 之外的输入它一概不认。
+
+**做法**:换 `AutoSuggestBox` —— `Text="{x:Bind ViewModel.Spec.Image, Mode=TwoWay}"` 负责输入,
+`TextChanged` 负责候选过滤,事件参数是 `AutoSuggestBoxTextChangedEventArgs`,
+要区分"人打的字"和"从下拉里点的项"就看 `args.Reason`(Manual / Suggestion / Programmatic)。
+往 `ItemsSource` / `Text` 回写时会再次触发 TextChanged,页面里用一个 `_syncingImageText` 布尔挡住重入即可。
+
+## 36. XAML 注释里不能出现连续两个减号
+
+**症状**:在 RunBuilderPage.xaml 里写了句"原样透传的其他参数,例如 --dns 8.8.8.8",
+XAML 编译器直接 WMC9997,整个页面报错,但报错位置只到"该行附近",不看注释内容根本想不到是它。
+
+**真相**:XAML 文件首先是 XML,而 XML 规范里注释内部禁止 `--` 序列 —— 跟 WinUI 无关,是最古老的那条 XML 规矩。
+
+**做法**:注释里别写 `--xxx` 这种双长选项原文(改成"例如 dns 8.8.8.8"或写进文档)。
+代码注释(C#)不受影响,随便写。
+
+## 37. Style 的 TargetType 和元素类型不对上,要等到点「添加端口」那一刻才炸
+
+**症状**:命令编排页一点「添加端口」整个应用退出。故障模块 `Microsoft.UI.Xaml.dll`,异常代码 `0xc000027b`
+(托管异常穿过 XAML 边界),事件查看器的 .NET Runtime 源里一条托管堆栈都没有,看着像无头天案。
+
+**真相**:端口行里的协议下拉框误贴了文本框的样式 —— `<ComboBox Style="{StaticResource RowBoxStyle}">`,
+而 `RowBoxStyle` 是 `TargetType="TextBox"`。XAML 编译器不校验样式目标类型,`DataTemplate` 里的元素又是
+**实例化时才创建**的,所以这错一路无声,直到那一行真的要长出来才抛
+`XamlParseException: Cannot apply a Style with TargetType 'TextBox' to an object of type 'ComboBox'`。
+空集合的 ItemsControl 一条错误都不会给 —— 于是"页面打开没事、点添加才炸"。
+
+**定位**:App.xaml.cs 本来就挂了 `UnhandledException` 并往 `%LOCALAPPDATA%\WslcDesktop\startup.log` 写全文,
+日志里那句 `[Line: 150 Position: 71]` 直接点到行。事件查看器没有托管堆栈不等于异常不存在:
+先翻应用自己的日志,再怀疑别的(和 #24"先确认跑的是新产物"是同一类教训)。
+
+**做法**:给下拉框单开一个 `TargetType="ComboBox"` 的样式(`RowComboStyle`),不复用行内文本框那套。
+这一类只在运行时暴露的错已经做成静态闸:`XamlStyleTargetTypeTests` 扫源码里每个
+`Style="{StaticResource …}"`,核对样式 TargetType 与所贴元素类型;闸自己也带一个用例
+(喂一段已知有错的 XAML,必须报且只报一处)—— 规则写错却一条都不报,比没有闸更危险。
+
+## 38. `Clipboard.Flush()` 抛错不等于没复制上
+
+**症状**:点「复制」偶尔提示"复制到剪贴板失败,请手动选中命令文本",可命令其实已经在剪贴板里、粘得出来。
+日志里是 `COMException 0x800401D0`(CLIPBRD_E_CANT_OPEN)。
+
+**真相**:`SetContent` 只是登记内容(延迟呈现),`Flush` 才把它真正交出去 —— 好让本进程之后退出剪贴板里仍有这条命令。
+而 `Flush` 需要剪贴板此刻不被别的进程占用;别的程序正开着剪贴板、或本窗口刚失去前台时它就抛 CANT_OPEN,
+这跟"内容粘不粘得出去"是两回事。把它当成复制失败是误报,而且是那种把用户推向手动复制的误报。
+
+**做法**:重试几次(占用转瞬即逝),仍然不行就回读剪贴板确认里面确有文本,再决定报成功还是失败。
+handler 里别用 `Thread.Sleep` 堵 UI 线程,改 `async void` + `await Task.Delay`。
+日志要带上异常类型和 `0x{HResult:x8}`:`COMException.Message` 在这里是空串,只打 Message 等于没打。
+
+## 39. ComboBox 的内联 ComboBoxItem:选框可能是空的
+
+**症状**:命令编排页的「拉取策略」下拉框,序号其实已经选中第 0 项(生成的命令也确实不带 `--pull`),
+框里却什么都不显示;把列表点开一次,字就出来了。同一页端口行里的协议下拉框(tcp/udp)一直正常。
+
+**真相**:`<ComboBoxItem Content="{Binding …}" />` 的 Content 要延后求值,而 ComboBox 在初始化那一刻
+就把"选框显示什么"抄成 `SelectionBoxItem` —— 抄到的是还没求值的空内容,之后绑定算出文字也不会回头再抄一次。
+协议框写的是 `<x:String>tcp</x:String>` 纯字符串,没有"等绑定"这一步,所以没事。
+编译器不报、单测测不到:这是纯视觉的空,只有肉眼看得到(截图时才发现)。
+
+**做法**:下拉框候选项一律给纯字符串 —— `ItemsSource` 绑一个字符串数组,或直接写 `x:String` 子项。
+需要本地化的文案就在页面构造时把数组拼好(切换语言时主窗口会重建页面,跟着构造函数取一次就够)。
+同样钉成静态闸:`XamlComboBoxItemContentTests` 扫源码里的内联 `ComboBoxItem`,`Content` 是绑定就报错;
+闸自己也带一个用例,免得规则写错却一条都不报。

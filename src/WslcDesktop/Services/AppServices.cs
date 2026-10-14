@@ -13,7 +13,6 @@ public static class AppServices
 
     public static ContainersService Containers { get; } = new(WslcCli);
     public static ImagesService Images { get; } = new(WslcCli);
-    public static LogsService Logs { get; } = new(WslcCli);
 
     /// <summary>wslc.exe 的完整路径,用于状态栏展示;未找到时为 null。</summary>
     public static string? WslcPath => WslcLocator.Find();

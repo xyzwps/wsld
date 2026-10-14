@@ -1,6 +1,7 @@
-using WslcDesktop.Core.Models;
+﻿using WslcDesktop.Core.Models;
 using WslcDesktop.Core.Parsing;
 using WslcDesktop.Core.WslcCli;
+
 
 namespace WslcDesktop.Core.Services;
 
@@ -61,6 +62,15 @@ public sealed class ContainersService
             ContainerAction.Remove => RemoveAsync(id, force, cancellationToken),
             _ => throw new ArgumentOutOfRangeException(nameof(action), action, "未知的容器操作。"),
         };
+
+    /// <summary>
+    /// 就地执行 wslc run(功能 012 · AC7)。参数由 <see cref="RunCommandBuilder"/> 生成。
+    /// stdout 逐行回调:后台模式进程秒回(附容器 ID);前台模式容器输出会像 `logs -f` 一样
+    /// 一行一行流回来,直到容器退出 —— 实测依据见功能 005(逐行流式在 wslc 里是可行的)。
+    /// 这里不抛异常:结果原样交给命令编排页,由它把退出码/stderr 摆进输出面板。
+    /// </summary>
+    public Task<WslcCliResult> RunAsync(RunSpec spec, Action<string>? onStdoutLine, CancellationToken cancellationToken = default) =>
+        _cli.RunLinesAsync(RunCommandBuilder.Build(spec), onStdoutLine, cancellationToken);
 
     private async Task RunGuardedAsync(string verb, string[] arguments, CancellationToken cancellationToken)
     {

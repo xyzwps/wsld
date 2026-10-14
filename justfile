@@ -21,7 +21,7 @@ dev: build
     @$e = Get-ChildItem src/WslcDesktop/bin -Recurse -Filter WslcDesktop.exe | Sort-Object LastWriteTime -Descending | Select-Object -First 1; \
     if ($e) { "启动:$($e.FullName)"; Start-Process -FilePath $e.FullName } else { "没找到 WslcDesktop.exe —— 先看上面的编译输出是否报错"; exit 1 }
 
-# 跑单元测试(不依赖真实 wslc,418 项)
+# 跑单元测试(不依赖真实 wslc,405 项)
 test:
     @dotnet test {{tests}} --nologo -v q
 

@@ -85,9 +85,10 @@
                         <FontIcon FontFamily="{StaticResource IconFont}" Glyph="&#xE8F1;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Tag="logs">
+                <!-- 功能 012:命令编排 -->
+                <NavigationViewItem Tag="run">
                     <NavigationViewItem.Icon>
-                        <FontIcon FontFamily="{StaticResource IconFont}" Glyph="&#xE7C3;" />
+                        <FontIcon FontFamily="{StaticResource IconFont}" Glyph="&#xE756;" />
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
             </NavigationView.MenuItems>
