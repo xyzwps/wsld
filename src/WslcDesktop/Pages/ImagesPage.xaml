@@ -26,13 +26,7 @@
                  Message="{x:Bind ViewModel.Notice, Mode=OneWay}" />
 
         <!-- 拉取区(功能 004 · AC14) -->
-        <Border Grid.Row="2"
-                Margin="12,12,12,0"
-                Padding="12"
-                CornerRadius="8"
-                Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                BorderThickness="1">
+        <Border Grid.Row="2" Margin="12,12,12,0" Style="{StaticResource CardBorderStyle}">
             <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto"
                   ColumnSpacing="8" RowSpacing="8">
 
@@ -88,7 +82,7 @@
                              Padding="10"
                              BorderThickness="0"
                              Background="Transparent"
-                             FontFamily="Consolas, Cascadia Mono, Courier New"
+                             FontFamily="{StaticResource CodeFont}"
                              FontSize="12"
                              IsReadOnly="True"
                              IsTabStop="False"
@@ -153,13 +147,20 @@
                                     <ColumnDefinition Width="Auto" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <Border Width="12" Height="12" CornerRadius="3" VerticalAlignment="Center"
-                                        Background="{ThemeResource ControlStrongFillColorDefaultBrush}" />
+                                <!-- 图标芯片:比纯色块更像"这是镜像" -->
+                                <Border Width="26" Height="26" CornerRadius="7" VerticalAlignment="Center"
+                                        Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1">
+                                    <FontIcon FontFamily="{StaticResource IconFont}" Glyph="&#xE8F1;" FontSize="13"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </Border>
                                 <TextBlock Grid.Column="1" Text="{x:Bind DisplayName, Mode=OneWay}"
                                            FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
                                            VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="2" Text="{x:Bind SizeText, Mode=OneWay}"
-                                           VerticalAlignment="Center" />
+                                           FontSize="12" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
 
                                 <!-- 删除操作(功能 004 · AC10/AC11,功能 009 · AC4:图标化) -->
                                 <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6"
@@ -175,7 +176,7 @@
                                             Click="RemoveButton_Click" />
                                 </StackPanel>
                             </Grid>
-                            <Grid Margin="20,0,0,0" ColumnSpacing="8">
+                            <Grid Margin="34,0,0,0" ColumnSpacing="8">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
@@ -197,11 +198,12 @@
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
-            <TextBlock x:Name="EmptyHint"
-                       Text="{Binding Converter={StaticResource LocText}, ConverterParameter=images.empty}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Visibility="Collapsed"
-                       Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+            <StackPanel x:Name="EmptyHint" Visibility="Collapsed"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                <FontIcon Style="{StaticResource EmptyStateIconStyle}" Glyph="&#xE8F1;" />
+                <TextBlock Style="{StaticResource EmptyStateTextStyle}"
+                           Text="{Binding Converter={StaticResource LocText}, ConverterParameter=images.empty}" />
+            </StackPanel>
         </Grid>
 
         <!-- 状态栏 -->

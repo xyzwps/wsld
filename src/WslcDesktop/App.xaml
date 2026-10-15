@@ -15,9 +15,89 @@
             <!-- 图标一律用这套码点(功能 009 · AC4) -->
             <FontFamily x:Key="IconFont">Segoe MDL2 Assets</FontFamily>
             <x:Double x:Key="IconFontSize">15</x:Double>
+            <!-- 等宽字族统一一处定义:命令预览 / 执行输出 / 拉取进度同一个观感 -->
+            <FontFamily x:Key="CodeFont">Consolas, Cascadia Mono, Courier New</FontFamily>
 
-            <!-- 工具栏/列表行里的纯图标按钮 -->
-            <Style x:Key="IconOnlyButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <!-- ===== 全应用共享的版式件:卡片 / 节标题 / 提示文字 ===== -->
+
+            <!-- 页面里的内容卡片:各页不要再各自复制一份 -->
+            <Style x:Key="CardBorderStyle" TargetType="Border">
+                <Setter Property="Padding" Value="16,14" />
+                <Setter Property="CornerRadius" Value="8" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
+                <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
+            </Style>
+
+            <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="FontSize" Value="14" />
+            </Style>
+
+            <Style x:Key="HintStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorTertiaryBrush}" />
+            </Style>
+
+            <!-- 只读等宽"终端块":命令预览 / 执行输出 / 拉取进度。
+                 底色比卡片再深一档,自带内边距和圆角,和卡片内容拉开层次。 -->
+            <Style x:Key="CodeBoxStyle" TargetType="TextBox">
+                <Setter Property="FontFamily" Value="{StaticResource CodeFont}" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="IsReadOnly" Value="True" />
+                <Setter Property="IsTabStop" Value="False" />
+                <Setter Property="IsSpellCheckEnabled" Value="False" />
+                <Setter Property="AcceptsReturn" Value="True" />
+                <Setter Property="TextWrapping" Value="Wrap" />
+                <Setter Property="Padding" Value="10" />
+                <Setter Property="CornerRadius" Value="6" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="{ThemeResource DividerStrokeColorDefaultBrush}" />
+                <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorSecondaryBrush}" />
+                <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
+            </Style>
+
+            <!-- ===== 状态徽标:胶囊形,运行 = 实心绿,停止 = 描边灰 ===== -->
+            <Style x:Key="RunningBadgeStyle" TargetType="Border">
+                <Setter Property="CornerRadius" Value="99" />
+                <Setter Property="Padding" Value="9,2" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBrush}" />
+            </Style>
+            <Style x:Key="StoppedBadgeStyle" TargetType="Border">
+                <Setter Property="CornerRadius" Value="99" />
+                <Setter Property="Padding" Value="9,2" />
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="VerticalAlignment" Value="Center" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderThickness" Value="1" />
+                <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
+            </Style>
+            <Style x:Key="BadgeTextStyle" TargetType="TextBlock">
+                <Setter Property="FontSize" Value="11" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <!-- 空状态:图标 + 一句话,居中 -->
+            <Style x:Key="EmptyStateIconStyle" TargetType="FontIcon">
+                <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
+                <Setter Property="FontSize" Value="30" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorDisabledBrush}" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+            </Style>
+            <Style x:Key="EmptyStateTextStyle" TargetType="TextBlock">
+                <Setter Property="Margin" Value="0,8,0,0" />
+                <Setter Property="FontSize" Value="12" />
+                <Setter Property="HorizontalAlignment" Value="Center" />
+                <Setter Property="Foreground" Value="{ThemeResource TextFillColorTertiaryBrush}" />
+            </Style>
+
+            <!-- ===== 按钮层级 ===== -->
+
+            <!-- 工具栏/列表行里的纯图标按钮:幽灵底,悬停才浮出浅底,一排摆在一起也不吵 -->
+            <Style x:Key="IconOnlyButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
                 <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
                 <Setter Property="FontSize" Value="{StaticResource IconFontSize}" />
                 <Setter Property="Padding" Value="7,4" />
@@ -34,14 +114,32 @@
                 <Setter Property="MinHeight" Value="32" />
             </Style>
 
-            <!-- 破坏性操作(删除):红色图标,和普通按钮同尺寸 -->
-            <Style x:Key="DangerIconButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+            <!-- 破坏性操作(删除):红色图标 + 幽灵底,行内不抢焦点,悬停才浮出浅底 -->
+            <Style x:Key="DangerIconButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
                 <Setter Property="FontFamily" Value="{StaticResource IconFont}" />
                 <Setter Property="FontSize" Value="{StaticResource IconFontSize}" />
                 <Setter Property="Padding" Value="7,4" />
                 <Setter Property="MinWidth" Value="0" />
                 <Setter Property="MinHeight" Value="32" />
                 <Setter Property="Foreground" Value="{ThemeResource SystemFillColorCriticalBrush}" />
+            </Style>
+
+            <!-- 次级文字按钮(复制 / 粘贴读回 / 清空):幽灵底,图标 + 文字横排 -->
+            <Style x:Key="GhostButtonStyle" TargetType="Button" BasedOn="{StaticResource SubtleButtonStyle}">
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Padding" Value="10,5" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </Style>
+
+            <!-- 行内"添加 xx"按钮:弱化的描边小按钮,别和卡片标题抢视觉 -->
+            <Style x:Key="AddButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
+                <Setter Property="HorizontalAlignment" Value="Left" />
+                <Setter Property="MinWidth" Value="0" />
+                <Setter Property="Padding" Value="12,4" />
+                <Setter Property="FontWeight" Value="SemiBold" />
+                <Setter Property="Background" Value="Transparent" />
+                <Setter Property="BorderBrush" Value="{ThemeResource ControlStrokeColorDefaultBrush}" />
+                <Setter Property="Foreground" Value="{ThemeResource AccentTextFillColorPrimaryBrush}" />
             </Style>
 
             <!-- 自定义标题栏里的扁平按钮:常态无底色,悬停才浮出浅色 -->

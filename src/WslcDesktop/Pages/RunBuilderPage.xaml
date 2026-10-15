@@ -9,38 +9,17 @@
     <!-- 功能 012:wslc run 的可视化编排。左边填表,右边实时长出命令,复制走或者就地跑。
          表单状态全在 RunSpec,拼命令 / 校验 / 读回全在 RunCommandBuilder,这一层只管呈现。
          静态文案走 LocText 转换器(页面 DataContext = Localizer.Default);换语言时主窗口会重建本页。
-         右列定宽 420:星号列不会缩到内容以下(dev-notes §31),给它固定宽度才不会把表单挤扁。 -->
+         右列定宽 420:星号列不会缩到内容以下(dev-notes §31),给它固定宽度才不会把表单挤扁。
+         卡片 / 节标题 / 提示 / 添加按钮等版式件一律走 App.xaml 的共享样式,本页不再各自复制。 -->
     <Page.Resources>
-        <Style x:Key="CardBorderStyle" TargetType="Border">
-            <Setter Property="Padding" Value="16,12" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
-            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
-        </Style>
-        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="FontSize" Value="14" />
-        </Style>
-        <Style x:Key="HintStyle" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12" />
-            <Setter Property="TextWrapping" Value="Wrap" />
-            <Setter Property="Foreground" Value="{ThemeResource TextFillColorTertiaryBrush}" />
-        </Style>
+        <!-- 字段统一横向铺满、封顶 560:比逐个写死 430/520/620 整齐,窗口再宽也不会拉成面条 -->
         <Style x:Key="FieldStyle" TargetType="TextBox">
-            <Setter Property="HorizontalAlignment" Value="Left" />
-            <Setter Property="MinWidth" Value="180" />
-            <Setter Property="MaxWidth" Value="520" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="MaxWidth" Value="560" />
         </Style>
         <Style x:Key="ComboStyle" TargetType="ComboBox">
             <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="MinWidth" Value="170" />
-        </Style>
-        <Style x:Key="AddButtonStyle" TargetType="Button" BasedOn="{StaticResource DefaultButtonStyle}">
-            <Setter Property="HorizontalAlignment" Value="Left" />
-            <Setter Property="MinWidth" Value="0" />
-            <Setter Property="Padding" Value="12,5" />
-            <Setter Property="FontWeight" Value="SemiBold" />
         </Style>
         <!-- 行内小输入框:宽度写死,谁也不跟谁抢星号列 -->
         <Style x:Key="RowBoxStyle" TargetType="TextBox">
@@ -70,7 +49,7 @@
 
                         <!-- AutoSuggestBox 而不是可编辑 ComboBox:后者没有 TextChanged 事件,
                              敲进去的字要等失焦才提交,右边那条命令就会慢半拍。 -->
-                        <AutoSuggestBox x:Name="ImageBox" Width="430"
+                        <AutoSuggestBox x:Name="ImageBox" HorizontalAlignment="Stretch" MaxWidth="560"
                                   Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.image}"
                                   PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.image.placeholder}"
                                   AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.image}"
@@ -78,7 +57,7 @@
                                   Text="{x:Bind ViewModel.Spec.Image, Mode=TwoWay}"
                                   TextChanged="ImageBox_TextChanged" />
 
-                        <TextBox Style="{StaticResource FieldStyle}" Width="430"
+                        <TextBox Style="{StaticResource FieldStyle}"
                                  Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.name}"
                                  PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.name.placeholder}"
                                  Text="{x:Bind ViewModel.Spec.Name, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -92,7 +71,8 @@
 
                         <CheckBox Content="{Binding Converter={StaticResource LocText}, ConverterParameter=run.rm}"
                                   IsChecked="{x:Bind ViewModel.Spec.Rm, Mode=TwoWay}" />
-                        <StackPanel Orientation="Horizontal" Spacing="16">
+                        <!-- 一排横放会被裁掉(-P 那个就出过界),老老实实各占一行,中英文都稳 -->
+                        <StackPanel Spacing="4">
                             <CheckBox Content="{Binding Converter={StaticResource LocText}, ConverterParameter=run.interactive}"
                                       IsChecked="{x:Bind ViewModel.Spec.Interactive, Mode=TwoWay}" />
                             <CheckBox Content="{Binding Converter={StaticResource LocText}, ConverterParameter=run.tty}"
@@ -115,14 +95,14 @@
                     <StackPanel Spacing="10">
                         <TextBlock Style="{StaticResource SectionHeaderStyle}"
                                    Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.section.command}" />
-                        <TextBox Style="{StaticResource FieldStyle}" Width="430"
+                        <TextBox Style="{StaticResource FieldStyle}"
                                  Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.entrypoint}"
                                  Text="{x:Bind ViewModel.Spec.Entrypoint, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBox Style="{StaticResource FieldStyle}" Width="430"
+                        <TextBox Style="{StaticResource FieldStyle}"
                                  Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.command}"
                                  PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.command.placeholder}"
                                  Text="{x:Bind ViewModel.Spec.Command, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <TextBox Style="{StaticResource FieldStyle}" Width="520"
+                        <TextBox Style="{StaticResource FieldStyle}"
                                  Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.args}"
                                  PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.args.placeholder}"
                                  Text="{x:Bind ViewModel.Spec.Arguments, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -269,7 +249,7 @@
                                 Content="{Binding Converter={StaticResource LocText}, ConverterParameter=run.add-env}"
                                 Command="{x:Bind ViewModel.AddEnvCommand, Mode=OneTime}" />
 
-                        <TextBox Style="{StaticResource FieldStyle}" Width="430"
+                        <TextBox Style="{StaticResource FieldStyle}"
                                  Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.env-file}"
                                  PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.env-file.placeholder}"
                                  Text="{x:Bind ViewModel.Spec.EnvFile, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -336,7 +316,7 @@
                                      PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.user.placeholder}"
                                      Text="{x:Bind ViewModel.Spec.User, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         </StackPanel>
-                        <TextBox Style="{StaticResource FieldStyle}" Width="300"
+                        <TextBox Style="{StaticResource FieldStyle}"
                                  Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.workdir}"
                                  PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.workdir.placeholder}"
                                  Text="{x:Bind ViewModel.Spec.Workdir, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
@@ -348,7 +328,7 @@
                     <StackPanel Spacing="10">
                         <TextBlock Style="{StaticResource SectionHeaderStyle}"
                                    Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.section.health}" />
-                        <TextBox Style="{StaticResource FieldStyle}" Width="520"
+                        <TextBox Style="{StaticResource FieldStyle}"
                                  Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.health.cmd}"
                                  Text="{x:Bind ViewModel.Spec.HealthCmd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                         <StackPanel Orientation="Horizontal" Spacing="10">
@@ -378,7 +358,7 @@
                     <StackPanel Spacing="10">
                         <TextBlock Style="{StaticResource SectionHeaderStyle}"
                                    Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.section.extras}" />
-                        <TextBox Style="{StaticResource FieldStyle}" Width="620" MaxWidth="620"
+                        <TextBox Style="{StaticResource FieldStyle}"
                                  PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.extras.placeholder}"
                                  Text="{x:Bind ViewModel.Spec.ExtraArgs, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
                     </StackPanel>
@@ -397,20 +377,24 @@
                      IsOpen="{x:Bind ViewModel.HasNotice, Mode=OneWay}"
                      Message="{x:Bind ViewModel.Notice, Mode=OneWay}" />
 
-            <!-- 所见即所跑:这一条既是预览,也是真正执行的参数(RunCommandBuilder 同一来源) -->
-            <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
-                <StackPanel Spacing="10">
-                    <TextBlock Style="{StaticResource SectionHeaderStyle}"
-                               Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.command.title}" />
-                    <TextBox x:Name="CommandBox" MaxHeight="150" IsReadOnly="True" AcceptsReturn="True"
-                             FontFamily="Consolas, Cascadia Mono, Courier New" FontSize="12" TextWrapping="Wrap"
-                             BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                    <!-- 所见即所跑:这一条既是预览,也是真正执行的参数(RunCommandBuilder 同一来源) -->
+                    <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock Grid.Column="0" Style="{StaticResource SectionHeaderStyle}" VerticalAlignment="Center"
+                                           Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.command.title}" />
+                                <Button Grid.Column="1" Style="{StaticResource IconOnlyButtonStyle}" Content="&#xE8CC;"
+                                        MinHeight="28" Padding="6,2"
+                                        Command="{x:Bind ViewModel.ClearFormCommand, Mode=OneTime}"
+                                        ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=run.clear.tooltip}"
+                                        AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=run.clear}" />
+                            </Grid>
+                    <TextBox x:Name="CommandBox" Style="{StaticResource CodeBoxStyle}" MaxHeight="150"
                              AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=run.command.title}"
                              Text="{x:Bind ViewModel.GeneratedCommand, Mode=OneWay}" />
 
                     <StackPanel Orientation="Horizontal" Spacing="8">
-                        <Button x:Name="CopyButton" Click="CopyButton_Click" Padding="10,5" MinWidth="0"
+                        <Button x:Name="CopyButton" Click="CopyButton_Click" Style="{StaticResource GhostButtonStyle}"
                                 IsEnabled="{x:Bind ViewModel.CanCopy, Mode=OneWay}"
                                 ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=run.copy.tooltip}"
                                 AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=run.copy}">
@@ -419,22 +403,13 @@
                                 <TextBlock FontSize="13" Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.copy}" />
                             </StackPanel>
                         </Button>
-                        <Button x:Name="ImportButton" Click="ImportButton_Click" Padding="10,5" MinWidth="0"
+                        <Button x:Name="ImportButton" Click="ImportButton_Click" Style="{StaticResource GhostButtonStyle}"
                                 IsEnabled="{x:Bind ViewModel.CanImport, Mode=OneWay}"
                                 ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=run.import.tooltip}"
                                 AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=run.import}">
                             <StackPanel Orientation="Horizontal" Spacing="6">
                                 <FontIcon FontFamily="{StaticResource IconFont}" Glyph="&#xE77F;" FontSize="14" />
                                 <TextBlock FontSize="13" Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.import}" />
-                            </StackPanel>
-                        </Button>
-                        <Button Padding="10,5" MinWidth="0"
-                                Command="{x:Bind ViewModel.ClearFormCommand, Mode=OneTime}"
-                                ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=run.clear.tooltip}"
-                                AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=run.clear}">
-                            <StackPanel Orientation="Horizontal" Spacing="6">
-                                <FontIcon FontFamily="{StaticResource IconFont}" Glyph="&#xE8CC;" FontSize="14" />
-                                <TextBlock FontSize="13" Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.clear}" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -450,8 +425,10 @@
                 </StackPanel>
             </Border>
 
-            <Grid Grid.Row="3" ColumnDefinitions="Auto,*,Auto" Margin="0,12,0,12">
-                <Button Style="{ThemeResource AccentButtonStyle}" MinWidth="0" Padding="12,6"
+            <!-- 主操作铺满整行:一眼看出这是这条链路的终点动作 -->
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,4,0,12">
+                <Button Grid.Column="0" Style="{ThemeResource AccentButtonStyle}"
+                        HorizontalAlignment="Stretch" MinWidth="0" MinHeight="34" Padding="12,6"
                         Command="{x:Bind ViewModel.ExecuteCommand, Mode=OneTime}"
                         AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=run.execute}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
@@ -460,7 +437,7 @@
                     </StackPanel>
                 </Button>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center" Margin="10,0,0,0"
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
                             Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}">
                     <ProgressRing Width="16" Height="16" VerticalAlignment="Center" IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
                     <TextBlock FontSize="12" VerticalAlignment="Center"
@@ -469,6 +446,7 @@
                 </StackPanel>
 
                 <Button Grid.Column="2" Style="{StaticResource IconOnlyButtonStyle}" Content="&#xE711;"
+                        VerticalAlignment="Center"
                         Command="{x:Bind ViewModel.CancelCommand, Mode=OneTime}"
                         Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                         ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=run.cancel.tooltip}"
@@ -508,7 +486,7 @@
                                         <TextBlock Grid.Column="0" FontSize="11" VerticalAlignment="Top" Margin="0,2,0,0"
                                                    Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                                    Text="{x:Bind TimeText, Mode=OneTime}" />
-                                        <TextBlock Grid.Column="1" FontSize="11" FontFamily="Consolas, Cascadia Mono, Courier New"
+                                        <TextBlock Grid.Column="1" FontSize="11" FontFamily="{StaticResource CodeFont}"
                                                    VerticalAlignment="Center" TextWrapping="Wrap" MaxHeight="44"
                                                    TextTrimming="CharacterEllipsis"
                                                    ToolTipService.ToolTip="{x:Bind Command, Mode=OneTime}"
@@ -530,13 +508,8 @@
                 <Grid RowDefinitions="Auto,*">
                     <TextBlock Grid.Row="0" Style="{StaticResource SectionHeaderStyle}"
                                Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.output.title}" />
-                    <TextBox Grid.Row="1" x:Name="OutputBox" Margin="0,8,0,0" IsReadOnly="True" IsTabStop="False"
-                             AcceptsReturn="True" TextWrapping="Wrap" BorderThickness="1"
-                             BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
-                             Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
-                             FontFamily="Consolas, Cascadia Mono, Courier New" FontSize="12"
+                    <TextBox Grid.Row="1" x:Name="OutputBox" Style="{StaticResource CodeBoxStyle}" Margin="0,8,0,0"
                              PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.output.placeholder}"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
                              AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=run.output.title}"
                              Text="{x:Bind ViewModel.OutputText, Mode=OneWay}" />
                 </Grid>

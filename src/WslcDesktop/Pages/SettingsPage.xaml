@@ -5,15 +5,9 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
     <!-- 功能 009 · AC2/AC3/AC5:主题与语言都在这里,选完立即生效并写盘。
-         文案在代码里赋值:换语言时整个页面会被重建,构造函数里取一次就够新。 -->
+         文案在代码里赋值:换语言时整个页面会被重建,构造函数里取一次就够新。
+         卡片 / 节标题走 App.xaml 共享样式,本页只留自己的行控件。 -->
     <Page.Resources>
-        <Style x:Key="CardBorderStyle" TargetType="Border">
-            <Setter Property="Padding" Value="16,12" />
-            <Setter Property="CornerRadius" Value="8" />
-            <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Background" Value="{ThemeResource CardBackgroundFillColorDefaultBrush}" />
-            <Setter Property="BorderBrush" Value="{ThemeResource CardStrokeColorDefaultBrush}" />
-        </Style>
         <Style x:Key="RowLabelStyle" TargetType="TextBlock">
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -21,11 +15,6 @@
         <!-- 系统默认的单选项很高,横着排一排才不会把设置页撑得看不到底。 -->
         <Style x:Key="OptionStyle" TargetType="RadioButton">
             <Setter Property="Padding" Value="8,0,0,0" />
-        </Style>
-        <Style x:Key="SectionHeaderStyle" TargetType="TextBlock">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="FontSize" Value="14" />
-            <Setter Property="Margin" Value="0,0,0,2" />
         </Style>
     </Page.Resources>
 

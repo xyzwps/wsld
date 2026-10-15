@@ -163,11 +163,12 @@
                         </DataTemplate>
                     </ListView.ItemTemplate>
                 </ListView>
-                <TextBlock x:Name="EmptyHint"
-                           Text="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.empty}"
-                           HorizontalAlignment="Center" VerticalAlignment="Center"
-                           Visibility="Collapsed"
-                           Foreground="{ThemeResource TextFillColorTertiaryBrush}" />
+                <StackPanel x:Name="EmptyHint" Visibility="Collapsed"
+                            HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <FontIcon Style="{StaticResource EmptyStateIconStyle}" Glyph="&#xE8A1;" />
+                    <TextBlock Style="{StaticResource EmptyStateTextStyle}"
+                               Text="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.empty}" />
+                </StackPanel>
             </Grid>
 
             <!-- 状态栏 -->
@@ -195,23 +196,16 @@
                            TextTrimming="CharacterEllipsis" />
 
                 <!-- 徽标要贴着标题,不能撑满整列:* 列上默认 Stretch 会把它拉成一条绿色横幅。 -->
-                <Border Grid.Column="1"
-                        CornerRadius="4" Padding="8,3"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center"
-                        Background="{ThemeResource SystemFillColorSuccessBrush}"
+                <Border Grid.Column="1" Style="{StaticResource RunningBadgeStyle}"
                         Visibility="{x:Bind DetailViewModel.IsRunning, Mode=OneWay, Converter={StaticResource BoolToVis}}">
                     <TextBlock Text="{Binding Converter={StaticResource LocText}, ConverterParameter=state.running}"
-                               FontSize="12" Foreground="White" />
+                               Style="{StaticResource BadgeTextStyle}" Foreground="White" />
                 </Border>
-                <Border Grid.Column="1"
-                        CornerRadius="4" Padding="8,3"
-                        HorizontalAlignment="Left"
-                        VerticalAlignment="Center"
-                        Background="{ThemeResource ControlStrongFillColorDefaultBrush}"
+                <Border Grid.Column="1" Style="{StaticResource StoppedBadgeStyle}"
                         Visibility="{x:Bind DetailViewModel.IsRunning, Mode=OneWay, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
                     <TextBlock Text="{Binding Converter={StaticResource LocText}, ConverterParameter=state.stopped}"
-                               FontSize="12" Foreground="White" />
+                               Style="{StaticResource BadgeTextStyle}"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </Border>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4">
@@ -260,12 +254,10 @@
                 <StackPanel Spacing="12" MaxWidth="600">
 
                     <!-- 基本信息 -->
-                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1" CornerRadius="8" Padding="16">
+                    <Border Style="{StaticResource CardBorderStyle}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.section.basic}"
-                                       FontWeight="SemiBold" FontSize="14" />
+                                       Style="{StaticResource SectionHeaderStyle}" />
                             <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="12">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.id}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Top" />
@@ -301,12 +293,10 @@
                     </Border>
 
                     <!-- 状态信息 -->
-                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1" CornerRadius="8" Padding="16">
+                    <Border Style="{StaticResource CardBorderStyle}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.section.status}"
-                                       FontWeight="SemiBold" FontSize="14" />
+                                       Style="{StaticResource SectionHeaderStyle}" />
                             <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto,Auto" RowSpacing="6" ColumnSpacing="12">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.state}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -327,12 +317,10 @@
                     </Border>
 
                     <!-- 网络 -->
-                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1" CornerRadius="8" Padding="16">
+                    <Border Style="{StaticResource CardBorderStyle}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.section.network}"
-                                       FontWeight="SemiBold" FontSize="14" />
+                                       Style="{StaticResource SectionHeaderStyle}" />
                             <Grid ColumnDefinitions="100,*" RowDefinitions="Auto,Auto" RowSpacing="6" ColumnSpacing="12">
                                 <TextBlock Grid.Row="0" Grid.Column="0" Text="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.ports}"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}" VerticalAlignment="Top" />
@@ -348,12 +336,10 @@
                     </Border>
 
                     <!-- 标签 -->
-                    <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                            BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                            BorderThickness="1" CornerRadius="8" Padding="16">
+                    <Border Style="{StaticResource CardBorderStyle}">
                         <StackPanel Spacing="10">
                             <TextBlock Text="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.section.labels}"
-                                       FontWeight="SemiBold" FontSize="14" />
+                                       Style="{StaticResource SectionHeaderStyle}" />
                             <TextBlock Text="{x:Bind DetailViewModel.Labels, Mode=OneWay}"
                                        IsTextSelectionEnabled="True" TextWrapping="Wrap"
                                        Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
@@ -364,11 +350,12 @@
             </ScrollViewer>
 
             <!-- 空状态提示 -->
-            <TextBlock Grid.Row="2"
-                       Text="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.empty}"
-                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
-                       Visibility="{x:Bind HasDetail, Mode=OneWay, Converter={StaticResource BoolToVis}, ConverterParameter=invert}" />
+            <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+                        Visibility="{x:Bind HasDetail, Mode=OneWay, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
+                <FontIcon Style="{StaticResource EmptyStateIconStyle}" Glyph="&#xE9D9;" />
+                <TextBlock Style="{StaticResource EmptyStateTextStyle}"
+                           Text="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.empty}" />
+            </StackPanel>
         </Grid>
     </Grid>
 </Page>
