@@ -22,6 +22,14 @@ public sealed partial class ContainersPageViewModel : ObservableObject
     private volatile bool _refreshing;
     private CancellationTokenSource? _autoRefreshCts;
 
+    /// <summary>
+    /// 自动刷新间隔,固定 3 秒、不开放给用户调:
+    /// 每次刷新都要起一个 <c>wslc list</c> 子进程并走一趟 WSL 引擎,再密就是白烧;
+    /// 而生命周期操作成功后本来就会立刻补刷一次(功能 002 · AC7),
+    /// 这个间隔只负责兜住从外部(另开终端)发生的变化,3 秒足够看不出来。
+    /// </summary>
+    public const int AutoRefreshSeconds = 3;
+
     public ContainersPageViewModel(ContainersService service, IUIThread? uiThread = null)
     {
         _service = service;
@@ -40,7 +48,6 @@ public sealed partial class ContainersPageViewModel : ObservableObject
     [ObservableProperty] private bool _hasError;
     [ObservableProperty] private string _searchText = "";
     [ObservableProperty] private bool _showStopped = true;
-    [ObservableProperty] private int _autoRefreshSeconds = 5;
     [ObservableProperty] private string _lastRefreshedAtText = T("refresh.never");
 
     /// <summary>是否有生命周期操作正在进行(功能 002 · AC5)。用字段而非自动属性,避免通知风暴。</summary>
@@ -148,7 +155,7 @@ public sealed partial class ContainersPageViewModel : ObservableObject
         }
     }
 
-    /// <summary>启动自动刷新循环(0 秒表示关闭,循环会持续等待直到用户重新选择间隔)。</summary>
+    /// <summary>启动自动刷新循环,间隔固定为 <see cref="AutoRefreshSeconds"/>;页面卸载时调 <see cref="StopAutoRefresh"/> 收尾。</summary>
     public void StartAutoRefresh()
     {
         StopAutoRefresh();
@@ -158,11 +165,9 @@ public sealed partial class ContainersPageViewModel : ObservableObject
         {
             while (!cts.IsCancellationRequested)
             {
-                var seconds = AutoRefreshSeconds;
-                var delay = seconds > 0 ? TimeSpan.FromSeconds(seconds) : TimeSpan.FromMilliseconds(300);
                 try
                 {
-                    await Task.Delay(delay, cts.Token).ConfigureAwait(false);
+                    await Task.Delay(TimeSpan.FromSeconds(AutoRefreshSeconds), cts.Token).ConfigureAwait(false);
                 }
                 catch (OperationCanceledException)
                 {

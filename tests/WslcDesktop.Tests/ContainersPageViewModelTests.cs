@@ -135,6 +135,35 @@ public class ContainersPageViewModelTests
         Assert.Equal(0, vm.TotalCount);
     }
 
+    [Fact]
+    public async Task AutoRefresh_FiresOnTheFixedCadence_AndStopsWhenStopped()
+    {
+        // 功能 001:自动刷新间隔钉死 3 秒、界面不给调(每次刷新都要起一个 wslc 子进程)。
+        // 这条用例就是那个决定的锁:有人把间隔改回去或把循环改坏,这里先红。
+        Assert.Equal(3, ContainersPageViewModel.AutoRefreshSeconds);
+
+        var cli = new FakeWslcCli().AlwaysReturn(0, TwoContainers);
+        var vm = new ContainersPageViewModel(new ContainersService(cli), uiThread: null);
+        var before = cli.Calls.Count; // 构造时那一次
+
+        vm.StartAutoRefresh();
+        try
+        {
+            await Task.Delay(6800); // 3 秒两次触发后还留出抖动余量
+        }
+        finally
+        {
+            vm.StopAutoRefresh();
+        }
+
+        Assert.InRange(cli.Calls.Count, before + 2, before + 3);
+
+        // 停了之后不再有新调用
+        var afterStop = cli.Calls.Count;
+        await Task.Delay(1200);
+        Assert.Equal(afterStop, cli.Calls.Count);
+    }
+
     /// <summary>调用挂起直到 Release,用于测试防重入。</summary>
     private sealed class GateWslcCli : IWslcCli
     {

@@ -32,8 +32,8 @@
                      IsClosable="False"
                      Message="{x:Bind ViewModel.Error, Mode=OneWay}" />
 
-            <!-- 工具栏:固定宽度塞不下一整行,拆成两行 —— 上面搜索 + 刷新,下面过滤 + 刷新间隔。
-                 ToggleSwitch 默认 MinWidth=154,不压成 0 就把右边的下拉顶出去了(dev-notes §18)。 -->
+            <!-- 工具栏:固定宽度塞不下一整行,拆成两行 —— 上面搜索 + 刷新,下面过滤 + 刷新节奏说明。
+                 ToggleSwitch 默认 MinWidth=154,不压成 0 就把右边的内容顶出去了(dev-notes §18)。 -->
             <Grid Grid.Row="1" RowDefinitions="Auto,Auto" Padding="12,12,6,0">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <TextBox x:Name="SearchBox"
@@ -66,11 +66,9 @@
                                HorizontalAlignment="Right" VerticalAlignment="Center"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                Text="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.auto-refresh}" />
-                    <ComboBox Grid.Column="2" x:Name="IntervalBox"
-                              Width="110" MinWidth="0"
-                              VerticalAlignment="Center"
-                              AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.auto-refresh}"
-                              SelectionChanged="Interval_Changed" />
+                    <TextBlock Grid.Column="2" x:Name="AutoRefreshHint"
+                               VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </Grid>
             </Grid>
 

@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using Microsoft.UI.Dispatching;
@@ -43,7 +42,9 @@ public sealed partial class ContainersPage : Page, INotifyPropertyChanged
         DataContext = Localizer.Default;
         InitializeComponent();
 
-        PopulateIntervalBox();
+        // 刷新间隔固定在 ViewModel 里(3 秒),这里只把数字填进那句静态提示。
+        AutoRefreshHint.Text = Fmt("interval.seconds", ContainersPageViewModel.AutoRefreshSeconds);
+
         ViewModel.Items.CollectionChanged += (_, _) =>
         {
             UpdateEmptyHint();
@@ -116,35 +117,11 @@ public sealed partial class ContainersPage : Page, INotifyPropertyChanged
         return panel;
     }
 
-    private void PopulateIntervalBox()
-    {
-        IntervalBox.Items.Add(new ComboBoxItem { Tag = "0", Content = T("interval.off") });
-        foreach (var seconds in new[] { 2, 5, 10, 30 })
-        {
-            IntervalBox.Items.Add(new ComboBoxItem
-            {
-                Tag = seconds.ToString(CultureInfo.InvariantCulture),
-                Content = Fmt("interval.seconds", seconds),
-            });
-        }
-
-        IntervalBox.SelectedIndex = 2;
-    }
-
     private void UpdateEmptyHint()
     {
         EmptyHint.Visibility = ViewModel.Items.Count == 0 && !ViewModel.HasError
             ? Visibility.Visible
             : Visibility.Collapsed;
-    }
-
-    private void Interval_Changed(object sender, SelectionChangedEventArgs e)
-    {
-        if (IntervalBox?.SelectedItem is ComboBoxItem { Tag: not null } item &&
-            int.TryParse(item.Tag.ToString(), NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds))
-        {
-            ViewModel.AutoRefreshSeconds = seconds;
-        }
     }
 
     /// <summary>选中项变化 = 用户在列表里点了一行(也可能是按方向键挪了焦点)。</summary>
