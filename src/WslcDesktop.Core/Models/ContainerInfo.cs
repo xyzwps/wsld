@@ -1,6 +1,5 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using static WslcDesktop.Core.I18n.Loc;
 
 namespace WslcDesktop.Core.Models;
 
@@ -44,13 +43,5 @@ public sealed class ContainerInfo
              ?? "";
 
     [JsonIgnore]
-    public string ShortId => Id.Length >= 12 ? Id[..12] : Id;
-
-    [JsonIgnore]
     public string ImageLine => $"{Image}  ·  {Command}";
-
-    [JsonIgnore]
-    public string SubtleLine => Fmt("container.subtle", State, ShortId, DashIfEmpty(Networks), DashIfEmpty(Ports));
-
-    private static string DashIfEmpty(string value) => string.IsNullOrWhiteSpace(value) ? "—" : value;
 }

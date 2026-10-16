@@ -15,7 +15,6 @@ public static class StringTables
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             // ---- Core:数据行文案 ----
-            ["container.subtle"] = "状态 {0} · ID {1} · 网络 {2} · 端口 {3}",
             ["image.untagged"] = "无标签 · {0}",
             ["image.in-use"] = "被 {0} 个容器引用",
             ["image.not-in-use"] = "未被容器引用",
@@ -278,7 +277,6 @@ public static class StringTables
         new Dictionary<string, string>(StringComparer.Ordinal)
         {
             // ---- Core:row text ----
-            ["container.subtle"] = "State {0} · ID {1} · Network {2} · Ports {3}",
             ["image.untagged"] = "Untagged · {0}",
             ["image.in-use"] = "Used by {0} container(s)",
             ["image.not-in-use"] = "Not used by any container",

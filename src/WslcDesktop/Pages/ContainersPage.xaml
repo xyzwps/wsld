@@ -94,7 +94,8 @@
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="vm:ContainerItemViewModel">
                             <!-- 固定宽度后一行只塞得下「名称 + 操作按钮」:
-                                 状态、镜像、明细各自占一行,谁长谁出省略号,不再互相抢宽度。
+                                 状态、镜像各自占一行,谁长谁出省略号,不再互相抢宽度。
+                                 ID/网络/端口这类明细不进列表行,点这一行看右栏详情。
                                  整行都是点击区,悬停提示把被删掉的那个按钮的说明补回来。 -->
                             <StackPanel Spacing="3" Padding="0,6"
                                         ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.view-tooltip}"
@@ -153,9 +154,6 @@
                                            TextTrimming="CharacterEllipsis" />
                                 <TextBlock Text="{x:Bind ImageLine, Mode=OneWay}" FontSize="12"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                                           TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{x:Bind SubtleLine, Mode=OneWay}" FontSize="12"
-                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
                                            TextTrimming="CharacterEllipsis" />
                             </StackPanel>
                         </DataTemplate>

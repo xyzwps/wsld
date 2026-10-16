@@ -39,7 +39,6 @@ public sealed partial class ContainerItemViewModel : ObservableObject
     public string Id => Model.Id;
     public string DisplayName => Model.DisplayName;
     public string ImageLine => Model.ImageLine;
-    public string SubtleLine => Model.SubtleLine;
     public bool IsRunning => Model.IsRunning;
     public string Status => Model.Status;
 
@@ -77,7 +76,6 @@ public sealed partial class ContainerItemViewModel : ObservableObject
         OnPropertyChanged(nameof(Id));
         OnPropertyChanged(nameof(DisplayName));
         OnPropertyChanged(nameof(ImageLine));
-        OnPropertyChanged(nameof(SubtleLine));
         OnPropertyChanged(nameof(Status));
         RaiseActionStates();
     }
