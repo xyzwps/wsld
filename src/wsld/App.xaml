@@ -58,17 +58,18 @@
                 <Setter Property="ScrollViewer.VerticalScrollBarVisibility" Value="Auto" />
             </Style>
 
-            <!-- ===== 状态徽标:胶囊形,运行 = 实心绿,停止 = 描边灰 ===== -->
+            <!-- ===== 状态徽标:圆角矩形小片,运行 = 实心绿,停止 = 描边灰 =====
+                 圆角固定 4 DIP,不写 99:99 会把两端收成半圆,三四个字的短标签就成了胶囊。 -->
             <Style x:Key="RunningBadgeStyle" TargetType="Border">
-                <Setter Property="CornerRadius" Value="99" />
-                <Setter Property="Padding" Value="9,2" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Padding" Value="9,3" />
                 <Setter Property="HorizontalAlignment" Value="Left" />
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="Background" Value="{ThemeResource SystemFillColorSuccessBrush}" />
             </Style>
             <Style x:Key="StoppedBadgeStyle" TargetType="Border">
-                <Setter Property="CornerRadius" Value="99" />
-                <Setter Property="Padding" Value="9,2" />
+                <Setter Property="CornerRadius" Value="4" />
+                <Setter Property="Padding" Value="9,3" />
                 <Setter Property="HorizontalAlignment" Value="Left" />
                 <Setter Property="VerticalAlignment" Value="Center" />
                 <Setter Property="Background" Value="Transparent" />
