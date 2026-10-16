@@ -10,15 +10,15 @@
          图标按钮必须同时给 ToolTip 和 AutomationProperties.Name,否则读屏软件念不出这是什么按钮。 -->
     <!-- 布局:左栏容器列表 = 固定宽度,右栏容器详情 = 剩下的全部。
          左栏绝不能写 "*":星号列至少要装得下内容的期望宽度,
-         工具栏(搜索框 + 开关 + 下拉)和行内四个图标按钮一撑,
-         窗口不够宽时右栏就被挤到只剩两三百像素,详情整块没法看。
+         工具栏(搜索框 + 开关 + 刷新键)一撑,窗口不够宽时右栏就被挤到只剩两三百像素,详情整块没法看。
+         宽度按"行里最长的那串镜像名"来定:命令挪进详情之后,340 DIP 放得下名称、状态、镜像和那个启动键。
          根 Grid 只有一行(隐式 "*"),两栏都靠它拿到窗口高度:
          这里多写一行 RowDefinitions="Auto,..." 会把两栏塞进 Auto 行,
          它们便以"无限高"去测量,列表和详情各自的内容撑满后内部滚动条永远不出现。 -->
     <Grid ColumnDefinitions="Auto,Auto,*">
 
         <!-- ===== 左栏:容器列表(固定宽度,不随窗口拉伸) ===== -->
-        <Grid Grid.Column="0" Width="420">
+        <Grid Grid.Column="0" Width="340">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto" />
                 <RowDefinition Height="Auto" />
@@ -128,7 +128,7 @@
                                 <TextBlock Text="{x:Bind Status, Mode=OneWay}" FontSize="12"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            TextTrimming="CharacterEllipsis" />
-                                <TextBlock Text="{x:Bind ImageLine, Mode=OneWay}" FontSize="12"
+                                <TextBlock Text="{x:Bind Image, Mode=OneWay}" FontSize="12"
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                            TextTrimming="CharacterEllipsis" />
                             </StackPanel>

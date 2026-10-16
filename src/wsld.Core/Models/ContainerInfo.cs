@@ -42,6 +42,4 @@ public sealed class ContainerInfo
              .FirstOrDefault()?.TrimStart('/')
              ?? "";
 
-    [JsonIgnore]
-    public string ImageLine => $"{Image}  ·  {Command}";
 }
