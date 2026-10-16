@@ -46,7 +46,7 @@ just package                 # 或:powershell -File tools\package.ps1
 
 ## 版本号
 
-只有 `src\WslcDesktop\WslcDesktop.csproj` 里的 `<Version>1.0.0</Version>` 一处:
+只有 `src\WslcDesktop\WslcDesktop.csproj` 里的 `<Version>0.0.1</Version>` 一处:
 它同时决定 exe 的文件版本和安装包文件名。临时改一次用 `just package -Version 1.2.0`。
 
 ## 客户机要求
@@ -70,7 +70,7 @@ just verify-installer -KeepInstalled   # 装完不卸载,自己点一遍中文�
 不想用脚本时的等价手工命令:
 
 ```powershell
-& .\artifacts\installer\WSLC-Desktop-Setup-1.0.0-x64.exe `
+& .\artifacts\installer\WSLC-Desktop-Setup-0.0.1-x64.exe `
   /CURRENTUSER /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=$env:TEMP\wslc-install.log
 & "$env:LOCALAPPDATA\Programs\WSLC Desktop\WslcDesktop.exe"
 & "$env:LOCALAPPDATA\Programs\WSLC Desktop\unins000.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
