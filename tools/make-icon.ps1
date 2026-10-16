@@ -1,78 +1,33 @@
-﻿# 生成应用图标:先画一张 1024 母版,再缩成多尺寸拼成 assets/app.ico
+﻿# 生成应用图标:读 assets/app-source.png(人工画的母版),缩成多尺寸拼成 assets/app.ico
 # (exe 内嵌图标、安装包、开始菜单快捷方式共用同一份)
+# 换了图标只需替换 app-source.png 再跑本脚本;母版至少 256 见方,否则小尺寸会糊。
 # 用法: powershell -NoProfile -ExecutionPolicy Bypass -File tools/make-icon.ps1
+param(
+  [string]$Source = ""
+)
 Add-Type -AssemblyName System.Drawing
 
 $root = Split-Path $PSScriptRoot -Parent
+$srcPng = if ($Source) { $Source } else { Join-Path $root "assets\app-source.png" }
 $outIco = Join-Path $root "assets\app.ico"
 $outPng = Join-Path $root "assets\app.png"
-New-Item -ItemType Directory -Force -Path (Split-Path $outIco) | Out-Null
+if (-not (Test-Path $srcPng)) { throw "找不到图标母版:$srcPng" }
 
 $sizes = @(16, 20, 24, 32, 40, 48, 64, 128, 256)
-$master = 1024
 
-function New-RoundedRect {
-  param([single]$X, [single]$Y, [single]$W, [single]$H, [single]$R)
-  $p = New-Object System.Drawing.Drawing2D.GraphicsPath
-  $d = $R * 2
-  $p.AddArc($X, $Y, $d, $d, 180.0, 90.0) | Out-Null
-  $p.AddArc($X + $W - $d, $Y, $d, $d, 270.0, 90.0) | Out-Null
-  $p.AddArc($X + $W - $d, $Y + $H - $d, $d, $d, 0.0, 90.0) | Out-Null
-  $p.AddArc($X, $Y + $H - $d, $d, $d, 90.0, 90.0) | Out-Null
-  $p.CloseFigure() | Out-Null
-  return $p
-}
+# ---- 读母版并摆成正方形(非方图居中留透明边,不裁不拉变形) ----
+$srcMs = New-Object System.IO.MemoryStream (,[System.IO.File]::ReadAllBytes($srcPng))
+$src = [System.Drawing.Bitmap]::FromStream($srcMs)
+$master = [Math]::Max($src.Width, $src.Height)
+Write-Output ("母版 {0}x{1} -> 正方形 {2}: {3}" -f $src.Width, $src.Height, $master, $srcPng)
+if ($master -lt 256) { Write-Warning "母版不足 256 见方,256 档会放大失真" }
 
 $bmp = New-Object System.Drawing.Bitmap($master, $master, ([System.Drawing.Imaging.PixelFormat]::Format32bppArgb))
 $g = [System.Drawing.Graphics]::FromImage($bmp)
-$g.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
-$g.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
 $g.Clear([System.Drawing.Color]::Transparent)
-
-$pad = [single]($master * 0.035)
-$side = [single]($master - 2 * $pad)
-$rx = $pad; $ry = $pad; $rw = $side; $rh = $side
-$body = New-RoundedRect -X $rx -Y $ry -W $rw -H $rh -R ($rw * [single]0.225)
-
-$c = { param($a, $r, $gr, $b) [System.Drawing.Color]::FromArgb($a, $r, $gr, $b) }
-$grad = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
-  ([System.Drawing.PointF]::new($rx, $ry)),
-  ([System.Drawing.PointF]::new($rx + $rw, $ry + $rh)),
-  (& $c 255 12 44 78), (& $c 255 44 143 214))
-$blend = New-Object System.Drawing.Drawing2D.ColorBlend(3)
-$blend.Colors = [System.Drawing.Color[]]@((& $c 255 9 38 70), (& $c 255 24 96 160), (& $c 255 68 176 236))
-$blend.Positions = [single[]]@(0.0, 0.55, 1.0)
-$grad.InterpolationColors = $blend
-$g.FillPath($grad, $body) | Out-Null
-
-# 上半身一道淡高光,免得整块太闷
-$hlRect = [System.Drawing.RectangleF]::new($rx, $ry, $rw, ($rh * [single]0.5))
-$hl = New-Object System.Drawing.Drawing2D.LinearGradientBrush(
-  $hlRect, (& $c 44 255 255 255), (& $c 0 255 255 255), [single]90.0)
-$g.SetClip($body)
-$g.FillRectangle($hl, $hlRect) | Out-Null
-$g.ResetClip()
-
-# 三层"容器"横条,左边一个状态点
-$barX = $rx + $rw * [single]0.20
-$barW = $rw * [single]0.60
-$barH = $rh * [single]0.105
-$barGap = $rh * [single]0.155
-$barY0 = $ry + $rh * [single]0.245
-$alphas = @(236, 190, 132)
-$dotColors = @((& $c 255 122 226 175), (& $c 255 255 196 92), (& $c 255 130 205 255))
-for ($i = 0; $i -lt 3; $i++) {
-  $y = $barY0 + $i * $barGap
-  $bar = New-RoundedRect -X $barX -Y $y -W $barW -H $barH -R ($barH / [single]2)
-  $brush = New-Object System.Drawing.SolidBrush((& $c $alphas[$i] 255 255 255))
-  $g.FillPath($brush, $bar) | Out-Null
-  $dr = $barH * [single]0.46
-  $g.FillEllipse((New-Object System.Drawing.SolidBrush($dotColors[$i])),
-                  ($barX + ($barH - $dr) / [single]2), ($y + ($barH - $dr) / [single]2), $dr, $dr) | Out-Null
-  $g.FillEllipse((New-Object System.Drawing.SolidBrush((& $c 64 9 38 70))),
-                  ($barX + $barW - $barH * [single]0.85), ($y + ($barH - $dr) / [single]2), $dr, $dr) | Out-Null
-}
-$grad.Dispose(); $hl.Dispose(); $g.Dispose()
+$g.DrawImage($src, ([System.Drawing.Rectangle]::new(
+  [int](($master - $src.Width) / 2), [int](($master - $src.Height) / 2), $src.Width, $src.Height)))
+$g.Dispose(); $src.Dispose(); $srcMs.Dispose()
 
 # ---- 缩到各尺寸 ----
 $pngBySize = @{}
@@ -82,6 +37,8 @@ foreach ($s in $sizes) {
   $sg.InterpolationMode = [System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic
   $sg.PixelOffsetMode = [System.Drawing.Drawing2D.PixelOffsetMode]::HighQuality
   $sg.SmoothingMode = [System.Drawing.Drawing2D.SmoothingMode]::AntiAlias
+  # 透明边要垫实,否则 HighQualityBicubic 会把透明像素的 RGB 混进边缘形成暗边
+  $sg.Clear([System.Drawing.Color]::Transparent)
   $sg.DrawImage($bmp, ([System.Drawing.Rectangle]::new(0, 0, $s, $s))) | Out-Null
   $sg.Dispose()
   $ms = New-Object System.IO.MemoryStream
@@ -149,5 +106,3 @@ $bw.Flush(); $fs.Close()
 
 Write-Output ("app.ico -> {0} ({1:N1} KB)" -f $outIco, ((Get-Item $outIco).Length / 1KB))
 Write-Output ("app.png -> {0}" -f $outPng)
-
-
