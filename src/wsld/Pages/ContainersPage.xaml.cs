@@ -53,26 +53,6 @@ public sealed partial class ContainersPage : Page, INotifyPropertyChanged
         Unloaded += (_, _) => ViewModel.StopAutoRefresh();
     }
 
-    private async void RemoveButton_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement { DataContext: ContainerItemViewModel item }) return;
-
-        var running = item.IsRunning;
-        var dialog = new ContentDialog
-        {
-            XamlRoot = XamlRoot,
-            Title = T("dialog.delete-container.title"),
-            Content = BuildDeleteMessage(item.DisplayName, running),
-            PrimaryButtonText = T("action.delete"),
-            CloseButtonText = T("action.cancel"),
-            DefaultButton = ContentDialogButton.Close,
-        };
-
-        if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
-
-        await item.RemoveCommand.ExecuteAsync(null);
-    }
-
     private async void DetailRemoveButton_Click(object sender, RoutedEventArgs e)
     {
         if (DetailViewModel is null) return;

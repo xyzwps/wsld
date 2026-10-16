@@ -27,11 +27,11 @@ public class ContainerActionsViewModelTests
     // ---------- AC1:命令映射(经由命令入口) ----------
 
     [Fact]
-    public async Task StopCommand_CallsWslcStopThenRefreshes()
+    public async Task Stop_CallsWslcStopThenRefreshes()
     {
         var (vm, cli) = Create(TwoContainers);
 
-        await Item(vm, "web").StopCommand.ExecuteAsync(null);
+        await vm.ExecuteAsync(Item(vm, "web"), ContainerAction.Stop);
 
         Assert.Equal(
             new[] { new[] { "list", "-a", "--format", "json" }, new[] { "stop", "aaaa11112222" }, new[] { "list", "-a", "--format", "json" } }
@@ -50,11 +50,11 @@ public class ContainerActionsViewModelTests
     }
 
     [Fact]
-    public async Task RestartCommand_CallsWslcRestart()
+    public async Task Restart_CallsWslcRestart()
     {
         var (vm, cli) = Create(TwoContainers);
 
-        await Item(vm, "db").RestartCommand.ExecuteAsync(null);
+        await vm.ExecuteAsync(Item(vm, "db"), ContainerAction.Restart);
 
         Assert.Contains(new[] { "restart", "bbbb22223333" }, cli.Calls.Select(a => a.ToArray()));
     }
@@ -66,7 +66,7 @@ public class ContainerActionsViewModelTests
     {
         var (vm, cli) = Create(TwoContainers);
 
-        await Item(vm, "web").RemoveCommand.ExecuteAsync(null);
+        await vm.ExecuteAsync(Item(vm, "web"), ContainerAction.Remove, force: true);
 
         Assert.Contains(new[] { "remove", "-f", "aaaa11112222" }, cli.Calls.Select(a => a.ToArray()));
     }
@@ -76,29 +76,21 @@ public class ContainerActionsViewModelTests
     {
         var (vm, cli) = Create(TwoContainers);
 
-        await Item(vm, "db").RemoveCommand.ExecuteAsync(null);
+        await vm.ExecuteAsync(Item(vm, "db"), ContainerAction.Remove, force: false);
 
         Assert.Contains(new[] { "remove", "bbbb22223333" }, cli.Calls.Select(a => a.ToArray()));
     }
 
-    // ---------- AC9:按钮可用性 ----------
+    // ---------- AC9:行内那个"启动"键的可用性 ----------
 
     [Fact]
-    public void ButtonAvailability_RunsOnState()
+    public void RowStartButton_AvailabilityRunsOnState()
     {
         var (vm, _) = Create(TwoContainers);
-        var web = Item(vm, "web");   // running
-        var db = Item(vm, "db");     // exited
 
-        Assert.False(web.CanStart);
-        Assert.True(web.CanStop);
-        Assert.True(web.CanRestart);
-        Assert.True(web.CanRemove);
-
-        Assert.True(db.CanStart);
-        Assert.False(db.CanStop);
-        Assert.True(db.CanRestart);
-        Assert.True(db.CanRemove);
+        Assert.False(Item(vm, "web").CanStart);   // 运行中不给启动
+        Assert.True(Item(vm, "db").CanStart);     // 已停止才给
+        // 停止 / 重启 / 删除不在行内,可用性由详情面板管(ContainerDetailViewModelTests)。
     }
 
     // ---------- AC7:成功后刷新一次 ----------
@@ -166,16 +158,13 @@ public class ContainerActionsViewModelTests
         Assert.True(web.IsBusy);
         Assert.False(db.IsBusy);
 
-        // 本行四个按钮全灭
+        // 本行的启动键灭掉
         Assert.False(web.CanStart);
-        Assert.False(web.CanStop);
-        Assert.False(web.CanRestart);
-        Assert.False(web.CanRemove);
+        Assert.False(web.StartCommand.CanExecute(null));
 
         // 其它行同样不能操作(全局单操作)
-        Assert.False(db.CanStop);
-        Assert.False(db.CanRemove);
-        Assert.False(db.RestartCommand.CanExecute(null));
+        Assert.False(db.CanStart);
+        Assert.False(db.StartCommand.CanExecute(null));
 
         // AC6:操作期间刷新被跳过
         var refresh = vm.RefreshAsync(CancellationToken.None);
@@ -192,8 +181,8 @@ public class ContainerActionsViewModelTests
 
         Assert.False(vm.IsBusy);
         Assert.False(web.IsBusy);
-        Assert.True(db.CanStart);
-        Assert.True(web.CanStop);
+        Assert.True(db.CanStart);   // 忙碌解除,已停止那行重新给启动
+        Assert.False(web.CanStart); // 假 CLI 里它始终是 running
         Assert.Equal(3, cli.Calls.Count); // 成功后补一次 list
     }
 

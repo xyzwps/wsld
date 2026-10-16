@@ -123,24 +123,6 @@
                                                 AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.start}"
                                                 IsEnabled="{x:Bind CanStart, Mode=OneWay}"
                                                 Command="{x:Bind StartCommand, Mode=OneTime}" />
-                                        <Button Style="{StaticResource IconOnlyButtonStyle}"
-                                                Content="&#xE71A;"
-                                                ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=action.stop.tooltip}"
-                                                AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.stop}"
-                                                IsEnabled="{x:Bind CanStop, Mode=OneWay}"
-                                                Command="{x:Bind StopCommand, Mode=OneTime}" />
-                                        <Button Style="{StaticResource IconOnlyButtonStyle}"
-                                                Content="&#xE72C;"
-                                                ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=action.restart.tooltip}"
-                                                AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.restart}"
-                                                IsEnabled="{x:Bind CanRestart, Mode=OneWay}"
-                                                Command="{x:Bind RestartCommand, Mode=OneTime}" />
-                                        <Button Style="{StaticResource DangerIconButtonStyle}"
-                                                Content="&#xE74D;"
-                                                ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=action.delete.tooltip}"
-                                                AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.delete}"
-                                                IsEnabled="{x:Bind CanRemove, Mode=OneWay}"
-                                                Click="RemoveButton_Click" />
                                     </StackPanel>
                                 </Grid>
                                 <TextBlock Text="{x:Bind Status, Mode=OneWay}" FontSize="12"

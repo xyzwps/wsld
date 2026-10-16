@@ -41,6 +41,24 @@ public class ContainerDetailViewModelTests
         Assert.False(detail.IsBusy);
     }
 
+    // ---------- AC9:四个操作键的可用性(行内只留启动,其余都在详情里) ----------
+
+    [Theory]
+    [InlineData("running", false, true, true, true)]
+    [InlineData("exited", true, false, true, true)]
+    public void ButtonAvailability_RunsOnState(string state, bool canStart, bool canStop, bool canRestart, bool canRemove)
+    {
+        var detail = new ContainerDetailViewModel(new ContainersService(new FakeWslcCli()));
+        detail.InitializeCommands(_ => Task.CompletedTask);   // RaiseActionStates 要摸命令对象
+
+        detail.ApplyModel(new ContainerInfo { Id = "aaaa11112222", Names = "web", State = state, Status = "s" });
+
+        Assert.Equal(canStart, detail.CanStart);
+        Assert.Equal(canStop, detail.CanStop);
+        Assert.Equal(canRestart, detail.CanRestart);
+        Assert.Equal(canRemove, detail.CanRemove);
+    }
+
     /// <summary>list 立即返回(始终是同一个已停止容器),其它命令挂起直到 Release。</summary>
     private sealed class GateCli : IWslcCli
     {
