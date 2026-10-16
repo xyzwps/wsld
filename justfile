@@ -34,9 +34,15 @@ itest:
 kill:
     @Stop-Process -Name WslcDesktop -ErrorAction SilentlyContinue; "没有在跑的实例也算正常"
 
-# 清理编译产物(交给 dotnet 自己做,不手动删目录)
-clean:
-    @dotnet clean {{sln}} --nologo; "已清理编译产物"
+# 清理编译产物:dotnet clean + 各项目 bin\obj + artifacts\(发布目录与旧 setup.exe)
+# 应用还开着会删不动,先 just kill;带 -NoDotnetClean 跳过 dotnet clean
+clean *args:
+    @powershell -NoProfile -ExecutionPolicy Bypass -File tools\clean.ps1 {{args}}
+
+# 清 Windows 图标缓存:换了 assets\app.ico 之后资源管理器/快捷方式还显示旧图就是它
+# 会重启资源管理器(桌面闪一下);带 -Yes 跳过确认
+clean-iconcache *args:
+    @powershell -NoProfile -ExecutionPolicy Bypass -File tools\clean-iconcache.ps1 {{args}}
 
 # 需要 Inno Setup 6:winget install JRSoftware.InnoSetup
 # 参数原样透传给 tools/package.ps1,例如:just package -Version 1.2.0 -Publisher "某某公司"
@@ -49,7 +55,7 @@ package *args:
 publish:
     @powershell -NoProfile -ExecutionPolicy Bypass -File tools\package.ps1 -NoInstaller
 
-# 重新生成应用图标 assets\app.ico(改了 tools\make-icon.ps1 之后跑)
+# 由母版 assets\app-source.png 重新生成应用图标 assets\app.ico(换了母版图之后跑)
 icon:
     @powershell -NoProfile -ExecutionPolicy Bypass -File tools\make-icon.ps1
 # 加 -KeepInstalled 装完不卸载,方便手工点一遍界面

@@ -25,7 +25,9 @@ just package                 # 或:powershell -File tools\package.ps1
 | `just package -NoInstaller` | 只发布,不出安装包 |
 | `just package -Runtime framework-dependent` | 出小包(客户机需自装 .NET 9 Desktop 运行时,一般不用) |
 | `just publish` | 同上 `-NoInstaller` |
-| `just icon` | 重新生成应用图标 `assets\app.ico` |
+| `just icon` | 由母版 `assets\app-source.png` 重新生成应用图标 `assets\app.ico` |
+| `just clean` | 清编译产物:各项目 `bin\`、`obj\` 加 `artifacts\`(发布目录与旧 setup.exe) |
+| `just clean-iconcache` | 清 Windows 图标缓存 —— 换了图标后资源管理器/快捷方式还显示旧图就是它,会重启资源管理器 |
 | `just verify-installer` | 出包后自检 |
 
 ## 里面装了什么

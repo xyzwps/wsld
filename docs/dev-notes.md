@@ -521,3 +521,20 @@ handler 里别用 `Thread.Sleep` 堵 UI 线程,改 `async void` + `await Task.De
 `_operationActive` 这类纯门闩可以留在原地先放。
 用例用一条专职泵线程充当 UI 线程(`PumpUiThread`),断言 IsBusy=false 的 PropertyChanged
 必须发生在泵线程 id 上 —— 拿旧代码跑必红,新代码绿;详情面板顺带钉 `RefreshRequested` 的线程。
+
+## 41. 换了 .ico,exe 和 shell 都换新了,任务栏还是旧图
+
+**症状**:重做 `assets\app.ico` 并重新构建,`just dev` 起的新 exe 内嵌图标已经是新的,
+任务栏按钮上却还是上一版图标;`dotnet clean` 重来一遍也没用。
+
+**排查**:分三层问一遍,别一上来怀疑构建。
+(1) `Icon.ExtractAssociatedIcon(exe)` 抽正在跑的那个 exe 的内嵌图标 —— 新;
+(2) `SHGetFileInfo(路径)` 问 shell 要这个路径的图标 —— 也新;
+(3) 任务栏按钮 —— 旧。
+前两条走 exe 资源和文件图标缓存,任务栏用的是 explorer 自己那份
+(磁盘 `IconCache.db` + `Explorer\iconcache*`,外加进程内存里的副本),按路径记账,
+"同一个路径重新编译"正好是它最容易踩歪的姿势。另一种可能:那个按钮是固定磁贴,
+它显示的是快捷方式里写死的图标路径,跟运行中的 exe 无关。
+
+**做法**:`just clean-iconcache`(结束 explorer → 删上面两处缓存 → 拉回 explorer),
+固定磁贴取消再重新固定。编译产物清不掉它,`just clean` 管的是另一层。
