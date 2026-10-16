@@ -538,3 +538,19 @@ handler 里别用 `Thread.Sleep` 堵 UI 线程,改 `async void` + `await Task.De
 
 **做法**:`just clean-iconcache`(结束 explorer → 删上面两处缓存 → 拉回 explorer),
 固定磁贴取消再重新固定。编译产物清不掉它,`just clean` 管的是另一层。
+
+## 42. 根 Grid 多写一行 RowDefinitions,整页就再也滚不动
+
+**症状**:容器页的列表和详情都不出滚动条。容器一多,最后一行直接被窗口底裁掉;
+详情卡片拉到窗口外也纹丝不动。XAML 里 ListView 和详情区的 `ScrollViewer` 都写得好好的。
+
+**真相**:页面根是 `<Grid ColumnDefinitions="Auto,Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,*,Auto">` ——
+六行是早期单列布局的遗留,三栏全都只写 `Grid.Column` 不写 `Grid.Row`,于是统统落在第 0 行,也就是 `Auto`。
+Auto 行测量子元素时给的是**无限高度**,子树里那些 `Height="*"` 当场失去意义:
+ListView 按"7 行全放得下"排版,`ScrollViewer` 按"内容多长我多长"排版,
+两者都不觉得自己溢出了,滚动条自然永远不出现 —— 裁切的是窗口,不是它们自己。
+
+**做法**:根 Grid 只留 `ColumnDefinitions="Auto,Auto,*"`,隐式单行是 `*`,两栏拿到的就是窗口高度。
+判据很简单:**声明了却没被任何子元素 `Grid.Row` 用到的行定义,一定在坑人**。
+`ImagesPage` 的八行都有人用,`RunBuilderPage` 压根不写行,`SettingsPage` 外层就是 `ScrollViewer`,
+所以这一条只咬到了容器页。
