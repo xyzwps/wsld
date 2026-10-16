@@ -220,10 +220,20 @@
                      Message="{x:Bind DetailError, Mode=OneWay}"
                      Visibility="{x:Bind HasDetail, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
 
-            <!-- 详情内容 -->
-            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Padding="12,4,12,12"
+            <!-- 详情内容:卡片宽度 = min(视口, 600 DIP),左右留白平分。
+                 这里必须把面板宽度显式绑到 ScrollViewer 的实际宽度(用经典 Binding ElementName;
+                 x:Bind 在解析顺序上拿不到还没建好的外层元素,绑出来是 0,整叠卡片直接不见):
+                 它的呈现器是按"内容的期望宽度"摆放的,Stretch 与 HorizontalContentAlignment 都不起作用,
+                 结果卡片会跟着数据忽宽忽窄(短标签的容器窄、长 JSON 的容器顶到封顶),
+                 而且比视口窄时会被摆到右边去 —— 看着就是"有时不居中"。
+                 横向滚动也照样关掉:开着时一条长标签就能把可滚动范围撑得比视口宽。
+                 左右留白放在面板自己的 Padding 上,这样"视口宽"就是可用的全部内容宽。 -->
+            <ScrollViewer x:Name="DetailScroller" Grid.Row="2" VerticalScrollBarVisibility="Auto"
+                          HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"
+                          Padding="0,4,0,12"
                           Visibility="{x:Bind HasDetail, Mode=OneWay, Converter={StaticResource BoolToVis}}">
-                <StackPanel Spacing="12" MaxWidth="600">
+                <StackPanel Spacing="12" Padding="12,0,12,0" MaxWidth="624" HorizontalAlignment="Center"
+                            Width="{Binding ActualWidth, ElementName=DetailScroller}">
 
                     <!-- 基本信息 -->
                     <Border Style="{StaticResource CardBorderStyle}">

@@ -554,3 +554,21 @@ ListView 按"7 行全放得下"排版,`ScrollViewer` 按"内容多长我多长"�
 判据很简单:**声明了却没被任何子元素 `Grid.Row` 用到的行定义,一定在坑人**。
 `ImagesPage` 的八行都有人用,`RunBuilderPage` 压根不写行,`SettingsPage` 外层就是 `ScrollViewer`,
 所以这一条只咬到了容器页。
+
+## 43. ScrollViewer 里的卡片忽宽忽窄:呈现器按"内容的期望宽度"摆放,Stretch 说了不算
+
+**症状**:容器详情的卡片本来要"封顶 600 DIP 并居中"。换容器时宽度会变 ——
+标签短的容器卡片明显窄一截,而且整叠卡片贴着右边,看着就是"有时不居中"。
+
+**真相**:`ScrollContentPresenter` 给内容排版用的是**内容自己的期望宽度**,
+不是视口宽度。所以 `HorizontalAlignment="Stretch"`、甚至 `HorizontalContentAlignment="Stretch"`
+都不起作用:窄内容就窄着摆,摆的位置又偏右。
+写成 `HorizontalAlignment="Center"` 更糟 —— 居中排列下面板只按内容取宽,宽度直接跟着数据跳。
+
+**做法**:把面板宽度显式绑到视口宽,`MaxWidth` 负责封顶,`HorizontalAlignment="Center"` 负责居中:
+`Width="{Binding ActualWidth, ElementName=DetailScroller}"`。
+注意这里**只能用经典 Binding**:改成 `x:Bind` 会因为解析顺序拿不到还没建好的外层元素,
+绑出来是 0,整叠卡片直接不见(实测如此)。
+另外留白要放在面板自己的 `Padding` 上,别放 `ScrollViewer.Padding` ——
+后者会让"视口宽"比内容可用宽度多出 24,内容就横向溢出了。
+横向滚动仍然要关着(`HorizontalScrollMode="Disabled"`),否则一条长标签就能把可滚动范围撑得比视口宽。
