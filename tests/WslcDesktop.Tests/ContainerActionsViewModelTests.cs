@@ -230,6 +230,39 @@ public class ContainerActionsViewModelTests
         Assert.Equal(order, vm.Items.Select(i => i.Id));
     }
 
+    // ---------- UI 线程契约:IsBusy 清零必须由 UI 线程发出 ----------
+
+    [Fact]
+    public async Task BusyIsClearedOnTheUiThreadSoTheSpinnerCanStop()
+    {
+        // 缺陷原型:wslc start 已返回、容器已在跑,行内却永远转圈。
+        // 根因是清零发生在线程池延续上,后台线程的 PropertyChanged 打不动 x:Bind,
+        // 而 UI 线程的后续刷新又因"值早就变了"不再补发通知。
+        var cli = new ActionGateCli(TwoContainers);
+        using var pump = new PumpUiThread();
+        var vm = new ContainersPageViewModel(new ContainersService(cli), pump);
+        Assert.True(SpinWait.SpinUntil(() => vm.Items.Count == 2, TimeSpan.FromSeconds(5)));
+        var web = Item(vm, "web");
+
+        var busyFalseThreads = new List<int>();
+        web.PropertyChanged += (sender, e) =>
+        {
+            if (e.PropertyName == nameof(ContainerItemViewModel.IsBusy) && !web.IsBusy)
+            {
+                busyFalseThreads.Add(Environment.CurrentManagedThreadId);
+            }
+        };
+
+        var pending = vm.ExecuteAsync(web, ContainerAction.Stop);
+        Assert.True(web.IsBusy); // 置位发生在调用线程(真实界面里就是 UI 线程)
+        cli.Release();
+        await pending;
+
+        Assert.Equal(pump.UiThreadId, Assert.Single(busyFalseThreads));
+        Assert.False(web.IsBusy);
+        Assert.False(vm.IsBusy);
+    }
+
     /// <summary>list 立即返回、其它命令挂起直到 Release。</summary>
     private sealed class ActionGateCli : IWslcCli
     {

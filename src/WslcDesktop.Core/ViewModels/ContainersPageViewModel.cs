@@ -143,10 +143,17 @@ public sealed partial class ContainersPageViewModel : ObservableObject
         }
         finally
         {
-            item.IsBusy = false;
             Volatile.Write(ref _operationActive, 0);
-            OnPropertyChanged(nameof(IsBusy));
-            RefreshActionStates();
+            // 操作是 ConfigureAwait(false) 完成的,延续落在线程池线程上。
+            // IsBusy 的清零与通知必须回到 UI 线程:PropertyChanged 从后台线程发出时
+            // x:Bind 不认,而随后的 UI 线程刷新里 SetProperty 又觉得"值没变"不会再补发,
+            // 结果就是容器已经启动、行内的圈却永远转下去。
+            await RunOnUiAsync(() =>
+            {
+                item.IsBusy = false;
+                OnPropertyChanged(nameof(IsBusy));
+                RefreshActionStates();
+            }).ConfigureAwait(false);
         }
 
         if (succeeded)

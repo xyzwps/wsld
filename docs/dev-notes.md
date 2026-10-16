@@ -502,3 +502,22 @@ handler 里别用 `Thread.Sleep` 堵 UI 线程,改 `async void` + `await Task.De
 需要本地化的文案就在页面构造时把数组拼好(切换语言时主窗口会重建页面,跟着构造函数取一次就够)。
 同样钉成静态闸:`XamlComboBoxItemContentTests` 扫源码里的内联 `ComboBoxItem`,`Content` 是绑定就报错;
 闸自己也带一个用例,免得规则写错却一条都不报。
+
+## 40. ConfigureAwait(false) 的延续里清 IsBusy:容器起来了,圈还在转
+
+**症状**:容器列表点「启动」,`wslc start` 早就 0 退出码返回、`wslc list` 里容器已经是 running,
+行内的 ProgressRing 却永远转下去;顶部的全局忙碌圈同样停不住,自动刷新还被 IsBusy 挡再也跳不起来。
+真机复现(直接照抄 `ProcessWslcCli.RunAsync` 的等法)证明不是 CLI 层挂管道 —— 进程 0.3s 退、管道正常 EOF。
+
+**真相**:`ExecuteAsync` 里 `await _service.RunAsync(...).ConfigureAwait(false)` 之后,
+延续落在线程池线程上;`finally` 的 `item.IsBusy = false` 与 `OnPropertyChanged`
+就在那个后台线程上发 PropertyChanged。x:Bind 只认 UI 线程上的通知,这条要么被丢掉要么把收尾打断。
+更刁钻的是第二刀:操作成功后回到 UI 线程刷新,`UpdateModel` 想顺手清 busy,
+可字段早被后台那行改成 false,`SetProperty` 觉得"值没变"不再补发通知 —— UI 永远等不到那一次"变了"。
+本仓库所有 UI 状态变更都走 `RunOnUiAsync`,唯独两处操作收尾(列表 VM 的 finally、详情 VM 的两个 finally
+与 `RefreshRequested`/`Removed` 事件)漏了网。
+
+**做法**:收尾(清零 + 通知 + `NotifyCanExecuteChanged`)整块 `await RunOnUiAsync(...)` 回 UI 线程;
+`_operationActive` 这类纯门闩可以留在原地先放。
+用例用一条专职泵线程充当 UI 线程(`PumpUiThread`),断言 IsBusy=false 的 PropertyChanged
+必须发生在泵线程 id 上 —— 拿旧代码跑必红,新代码绿;详情面板顺带钉 `RefreshRequested` 的线程。

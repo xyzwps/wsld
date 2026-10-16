@@ -112,7 +112,8 @@ public sealed partial class ContainerDetailViewModel : ObservableObject
         try
         {
             await _service.RunAsync(action, ContainerId, force: false).ConfigureAwait(false);
-            RefreshRequested?.Invoke(this, EventArgs.Empty);
+            // 事件处理器会改页面上被 x:Bind 绑定的属性,必须在 UI 线程上调用。
+            await RunOnUiAsync(() => RefreshRequested?.Invoke(this, EventArgs.Empty)).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -121,8 +122,7 @@ public sealed partial class ContainerDetailViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
-            RaiseActionStates();
+            await ClearBusyAsync().ConfigureAwait(false);
         }
     }
 
@@ -133,7 +133,7 @@ public sealed partial class ContainerDetailViewModel : ObservableObject
         try
         {
             await _service.RemoveAsync(ContainerId, force: IsRunning).ConfigureAwait(false);
-            Removed?.Invoke(this, EventArgs.Empty);
+            await RunOnUiAsync(() => Removed?.Invoke(this, EventArgs.Empty)).ConfigureAwait(false);
         }
         catch (OperationCanceledException) { }
         catch (Exception ex)
@@ -142,10 +142,18 @@ public sealed partial class ContainerDetailViewModel : ObservableObject
         }
         finally
         {
-            IsBusy = false;
-            RaiseActionStates();
+            await ClearBusyAsync().ConfigureAwait(false);
         }
     }
+
+    /// <summary>操作在 ConfigureAwait(false) 的延续里收尾,IsBusy 清零必须回到 UI 线程,
+    /// 否则后台线程的 PropertyChanged 打不动 x:Bind,详情面板的圈会一直转。</summary>
+    private Task ClearBusyAsync() =>
+        RunOnUiAsync(() =>
+        {
+            IsBusy = false;
+            RaiseActionStates();
+        });
 
     private void RaiseActionStates()
     {
