@@ -35,15 +35,22 @@
                      IsClosable="False"
                      Message="{x:Bind ViewModel.Error, Mode=OneWay}" />
 
-            <!-- 工具栏:固定宽度塞不下一整行,拆成两行 —— 上面搜索 + 刷新,下面过滤 + 刷新节奏说明。
+            <!-- 工具栏:固定宽度塞不下一整行,拆成两行 —— 上面整行搜索,下面过滤 + 刷新键。
                  ToggleSwitch 默认 MinWidth=154,不压成 0 就把右边的内容顶出去了(dev-notes §18)。 -->
             <Grid Grid.Row="1" RowDefinitions="Auto,Auto" Padding="12,12,6,0">
-                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                    <TextBox x:Name="SearchBox"
-                             PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.search.placeholder}"
-                             HorizontalAlignment="Stretch"
-                             Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                <TextBox x:Name="SearchBox"
+                         PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.search.placeholder}"
+                         HorizontalAlignment="Stretch"
+                         Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+
+                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,8,0,0">
+                    <ToggleSwitch x:Name="ShowStoppedToggle"
+                                  MinWidth="0"
+                                  OnContent="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.show-stopped}"
+                                  OffContent="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.hide-stopped}"
+                                  VerticalAlignment="Center"
+                                  IsOn="{x:Bind ViewModel.ShowStopped, Mode=TwoWay}" />
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
                         <ProgressRing x:Name="BusyRing"
                                       Width="18" Height="18"
                                       VerticalAlignment="Center"
@@ -55,23 +62,6 @@
                                 AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.refresh}"
                                 Command="{x:Bind ViewModel.RefreshCommand}" />
                     </StackPanel>
-                </Grid>
-
-                <Grid Grid.Row="1" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8" Margin="0,8,0,0">
-                    <ToggleSwitch x:Name="ShowStoppedToggle"
-                                  MinWidth="0"
-                                  OnContent="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.show-stopped}"
-                                  OffContent="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.hide-stopped}"
-                                  VerticalAlignment="Center"
-                                  IsOn="{x:Bind ViewModel.ShowStopped, Mode=TwoWay}" />
-                    <TextBlock Grid.Column="1"
-                               Margin="0,0,8,0"
-                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               Text="{Binding Converter={StaticResource LocText}, ConverterParameter=containers.auto-refresh}" />
-                    <TextBlock Grid.Column="2" x:Name="AutoRefreshHint"
-                               VerticalAlignment="Center"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
                 </Grid>
             </Grid>
 

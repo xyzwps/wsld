@@ -42,9 +42,6 @@ public sealed partial class ContainersPage : Page, INotifyPropertyChanged
         DataContext = Localizer.Default;
         InitializeComponent();
 
-        // 刷新间隔固定在 ViewModel 里(3 秒),这里只把数字填进那句静态提示。
-        AutoRefreshHint.Text = Fmt("interval.seconds", ContainersPageViewModel.AutoRefreshSeconds);
-
         ViewModel.Items.CollectionChanged += (_, _) =>
         {
             UpdateEmptyHint();
