@@ -139,7 +139,7 @@ Windows 盘符带冒号(`C:\data:/app:ro`)、带空格的值(引号包住)都要
 
 | 项目 | 结果 |
 |---|---|
-| `dotnet build WslcDesktop.sln` | 成功,**0 警告 0 错误** |
+| `dotnet build wsld.sln` | 成功,**0 警告 0 错误** |
 | `dotnet test` | **405 项全绿**(001–011 既有 353 + 本功能 52) |
 
 ### 真机验证(Windows 11 + 真实 wslc 3.0.1,界面驱动走查)

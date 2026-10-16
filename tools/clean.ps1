@@ -7,14 +7,14 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
 
 # 应用还开着的话 bin 里的 exe 被占住,删到一半会报错;让它先去 just kill
-$running = @(Get-Process WslcDesktop -ErrorAction SilentlyContinue)
+$running = @(Get-Process wsld -ErrorAction SilentlyContinue)
 if ($running.Count -gt 0) {
-  Write-Error "有 $($running.Count) 个 WslcDesktop 正在运行,文件会被占住。先跑 just kill。"
+  Write-Error "有 $($running.Count) 个 wsld 正在运行,文件会被占住。先跑 just kill。"
   exit 1
 }
 
 if (-not $NoDotnetClean) {
-  dotnet clean (Join-Path $root "WslcDesktop.sln") --nologo
+  dotnet clean (Join-Path $root "wsld.sln") --nologo
   if ($LASTEXITCODE -ne 0) {
     Write-Error "dotnet clean 失败(退出码 $LASTEXITCODE)"
     exit 1

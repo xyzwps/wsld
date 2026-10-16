@@ -130,7 +130,7 @@
 - 单元测试 `dotnet test`:**167 通过 / 0 失败 / 0 警告**(功能 004 新增 54 个 ——
   `ImageActionsServiceTests` 20、`ImagesPageViewModelActionTests` 16、`ImageForcePolicyTests` 18;
   功能 001–003 的 113 个全部保持通过,AC13 成立)。
-- 真机冒烟 `WSLC_DESKTOP_INTEGRATION=1`:6 个用例全通过,其中本功能新增 3 个 ——
+- 真机冒烟 `WSLD_INTEGRATION=1`:6 个用例全通过,其中本功能新增 3 个 ——
   重复拉取已存在的镜像 → `IsUpToDate == true`;删除正被 2 个容器引用的 busybox → 抛冲突、
   `ImageRemovalConflict.IsConflict == true`、镜像仍在列表里;给已有镜像打临时标签再
   `RemoveAsync` → 标签消失、镜像数据无损。

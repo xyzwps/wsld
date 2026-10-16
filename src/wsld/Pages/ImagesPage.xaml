@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="wsld.Pages.ImagesPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:wsld.Core.ViewModels"
+>
+    <!-- 功能 009 · AC4/AC5:按钮换成图标,静态文案走 Localizer(页面 DataContext = Localizer.Default)。
+         删除按钮的悬停说明会随"是否已升级为强制删除"变化,那个绑的是行对象上的属性。 -->
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto">
+
+        <!-- 失败提示(功能 003 · AC7 / 功能 004 · AC9:失败不丢数据) -->
+        <InfoBar Grid.Row="0"
+                 Margin="12,12,12,0"
+                 Severity="Error"
+                 IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                 IsClosable="False"
+                 Message="{x:Bind ViewModel.Error, Mode=OneWay}" />
+
+        <!-- 成功提示(功能 004 · AC14:绿色 InfoBar) -->
+        <InfoBar Grid.Row="1"
+                 Margin="12,12,12,0"
+                 Severity="Success"
+                 IsOpen="{x:Bind ViewModel.HasNotice, Mode=OneWay}"
+                 IsClosable="False"
+                 Message="{x:Bind ViewModel.Notice, Mode=OneWay}" />
+
+        <!-- 拉取区(功能 004 · AC14) -->
+        <Border Grid.Row="2" Margin="12,12,12,0" Style="{StaticResource CardBorderStyle}">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto" ColumnDefinitions="*,Auto,Auto"
+                  ColumnSpacing="8" RowSpacing="8">
+
+                <TextBox x:Name="PullBox"
+                         Grid.Row="0" Grid.Column="0"
+                         PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=images.pull.placeholder}"
+                         Text="{x:Bind ViewModel.PullText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                         KeyDown="PullBox_KeyDown" />
+
+                <Button Grid.Row="0" Grid.Column="1"
+                        Style="{StaticResource AccentIconButtonStyle}"
+                        Content="&#xE896;"
+                        ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=images.pull.tooltip}"
+                        AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.pull}"
+                        Command="{x:Bind ViewModel.PullCommand, Mode=OneTime}"
+                        IsEnabled="{x:Bind ViewModel.CanPull, Mode=OneWay}" />
+
+                <Button x:Name="CancelButton"
+                        Grid.Row="0" Grid.Column="2"
+                        Style="{StaticResource IconOnlyButtonStyle}"
+                        Content="&#xE711;"
+                        ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=images.cancel.tooltip}"
+                        AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.cancel}"
+                        Command="{x:Bind ViewModel.CancelPullCommand, Mode=OneTime}"
+                        Visibility="{x:Bind ViewModel.IsPulling, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+
+                <!-- 进度(功能 004 · AC7:已等待秒数 + 功能 011 · AC2:已下载量与完成层数) -->
+                <StackPanel Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="3"
+                            Orientation="Horizontal" Spacing="8"
+                            Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                    <ProgressRing Width="16" Height="16" VerticalAlignment="Center"
+                                  IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
+                    <TextBlock FontSize="12" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
+                               Text="{x:Bind ViewModel.BusyText, Mode=OneWay}" />
+                    <TextBlock FontSize="12" VerticalAlignment="Center"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               Visibility="{x:Bind ViewModel.HasPullSummary, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                               Text="{x:Bind ViewModel.PullSummary, Mode=OneWay}" />
+                </StackPanel>
+
+                <!-- 实时进度(功能 011 · AC3):wslc 在伪终端里渲染的分层进度,原样搬上来。
+                     只读、等宽、可整块复制 —— 和日志区一个路子;最多 160 DIP,超出后框内滚动。
+                     一行代表一个分层的最新状态,所以行数只随层数增长,不会随刷新次数变长。 -->
+                <Border Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3"
+                        MaxHeight="160"
+                        CornerRadius="4"
+                        BorderThickness="1"
+                        BorderBrush="{ThemeResource DividerStrokeColorDefaultBrush}"
+                        Background="{ThemeResource CardBackgroundFillColorSecondaryBrush}"
+                        Visibility="{x:Bind ViewModel.HasPullProgress, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                    <TextBox x:Name="PullProgressBar"
+                             Padding="10"
+                             BorderThickness="0"
+                             Background="Transparent"
+                             FontFamily="{StaticResource CodeFont}"
+                             FontSize="12"
+                             IsReadOnly="True"
+                             IsTabStop="False"
+                             IsSpellCheckEnabled="False"
+                             AcceptsReturn="True"
+                             TextWrapping="NoWrap"
+                             ScrollViewer.VerticalScrollBarVisibility="Auto"
+                             ScrollViewer.HorizontalScrollBarVisibility="Auto"
+                             ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=pull.progress.tooltip}"
+                             Text="{x:Bind ViewModel.PullProgressText, Mode=OneWay}" />
+                </Border>
+
+                <!-- 镜像源预览(功能 010 · AC4):只有真的改写了引用才占这一行 -->
+                <TextBlock Grid.Row="3" Grid.Column="0" Grid.ColumnSpan="3"
+                           FontSize="12" TextWrapping="Wrap"
+                           Visibility="{x:Bind ViewModel.HasPullMirrorHint, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                           Text="{x:Bind ViewModel.PullMirrorHint, Mode=OneWay}" />
+            </Grid>
+        </Border>
+
+        <!-- 工具栏(功能 003 · AC12:不自动轮询,只有手动刷新) -->
+        <Grid Grid.Row="3" ColumnDefinitions="*,Auto" Padding="12,12,12,0">
+            <TextBox x:Name="SearchBox"
+                     PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=images.search.placeholder}"
+                     Width="280"
+                     HorizontalAlignment="Left"
+                     VerticalAlignment="Bottom"
+                     Text="{x:Bind ViewModel.SearchText, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+            <Button Grid.Column="1"
+                    Style="{StaticResource IconOnlyButtonStyle}"
+                    Content="&#xE895;"
+                    VerticalAlignment="Bottom"
+                    ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=images.refresh.tooltip}"
+                    AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.refresh}"
+                    Command="{x:Bind ViewModel.RefreshCommand, Mode=OneTime}" />
+        </Grid>
+
+        <!-- 汇总(AC10) -->
+        <TextBlock Grid.Row="4"
+                   Margin="12,12,12,4"
+                   Text="{x:Bind ViewModel.Summary, Mode=OneWay}"
+                   Style="{ThemeResource BodyTextBlockStyle}"
+                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+        <Border Grid.Row="5" Height="1" Margin="12,0"
+                Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
+
+        <!-- 镜像列表 -->
+        <Grid Grid.Row="6" Margin="12,4,12,0">
+            <ListView x:Name="ImageList"
+                      ItemsSource="{x:Bind ViewModel.Items, Mode=OneWay}"
+                      SelectionMode="None"
+                      IsItemClickEnabled="False">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:ImageItemViewModel">
+                        <StackPanel Spacing="3" Padding="0,6" AutomationProperties.Name="{x:Bind DisplayName, Mode=OneWay}">
+                            <Grid ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <!-- 图标芯片:比纯色块更像"这是镜像" -->
+                                <Border Width="26" Height="26" CornerRadius="7" VerticalAlignment="Center"
+                                        Background="{ThemeResource ControlFillColorSecondaryBrush}"
+                                        BorderBrush="{ThemeResource ControlStrokeColorDefaultBrush}"
+                                        BorderThickness="1">
+                                    <FontIcon FontFamily="{StaticResource IconFont}" Glyph="&#xE8F1;" FontSize="13"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                </Border>
+                                <TextBlock Grid.Column="1" Text="{x:Bind DisplayName, Mode=OneWay}"
+                                           FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="2" Text="{x:Bind SizeText, Mode=OneWay}"
+                                           FontSize="12" VerticalAlignment="Center"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+
+                                <!-- 删除操作(功能 004 · AC10/AC11,功能 009 · AC4:图标化) -->
+                                <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="6"
+                                            VerticalAlignment="Center">
+                                    <ProgressRing Width="16" Height="16" VerticalAlignment="Center"
+                                                  IsActive="{x:Bind IsBusy, Mode=OneWay}"
+                                                  Visibility="{x:Bind IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                                    <Button Style="{StaticResource DangerIconButtonStyle}"
+                                            Content="&#xE74D;"
+                                            ToolTipService.ToolTip="{x:Bind RemoveTooltip, Mode=OneWay}"
+                                            AutomationProperties.Name="{x:Bind RemoveLabel, Mode=OneWay}"
+                                            IsEnabled="{x:Bind CanRemove, Mode=OneWay}"
+                                            Click="RemoveButton_Click" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid Margin="34,0,0,0" ColumnSpacing="8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{x:Bind SubtleLine, Mode=OneWay}" FontSize="12"
+                                           Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                                           TextTrimming="CharacterEllipsis" />
+                                <!-- 被容器引用时用警示色标出,并说明按钮会变成什么 -->
+                                <TextBlock Grid.Column="1" FontSize="12"
+                                           Text="{x:Bind UsageText, Mode=OneWay}"
+                                           Visibility="{x:Bind IsInUse, Mode=OneWay, Converter={StaticResource BoolToVis}}"
+                                           Foreground="{ThemeResource SystemFillColorCautionBrush}" />
+                                <TextBlock Grid.Column="1" FontSize="12"
+                                           Text="{x:Bind UsageText, Mode=OneWay}"
+                                           Visibility="{x:Bind IsInUse, Mode=OneWay, Converter={StaticResource BoolToVis}, ConverterParameter=invert}"
+                                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            </Grid>
+                        </StackPanel>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+            <StackPanel x:Name="EmptyHint" Visibility="Collapsed"
+                        HorizontalAlignment="Center" VerticalAlignment="Center">
+                <FontIcon Style="{StaticResource EmptyStateIconStyle}" Glyph="&#xE8F1;" />
+                <TextBlock Style="{StaticResource EmptyStateTextStyle}"
+                           Text="{Binding Converter={StaticResource LocText}, ConverterParameter=images.empty}" />
+            </StackPanel>
+        </Grid>
+
+        <!-- 状态栏 -->
+        <StackPanel Grid.Row="7" Orientation="Horizontal" Spacing="6" Margin="12,8,12,10">
+            <TextBlock FontSize="12"
+                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                       Text="{x:Bind ViewModel.LastRefreshedAtText, Mode=OneWay}" />
+            <TextBlock FontSize="12"
+                       Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                       Text="{Binding Converter={StaticResource LocText}, ConverterParameter=images.footer}" />
+        </StackPanel>
+    </Grid>
+</Page>

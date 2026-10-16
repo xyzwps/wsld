@@ -105,7 +105,7 @@ Core 层不做任何确认。UI 层(ContainersPage)在点击"删除"时弹出 Co
 
 ## 测试
 
-`tests/WslcDesktop.Tests/ContainerActionsTests.cs` 覆盖 AC1–AC8、AC11;
+`tests/wsld.Tests/ContainerActionsTests.cs` 覆盖 AC1–AC8、AC11;
 `ContainersPageViewModelTests.cs` 继续覆盖功能 001 的行为,并新增"操作期间跳过刷新"。
 所有测试用 `FakeWslcCli` 注入,不需要真实 `wslc`。
 

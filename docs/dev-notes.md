@@ -40,12 +40,12 @@ protected override void OnLaunched(LaunchActivatedEventArgs args)
 构建与测试命令:
 
 ```powershell
-dotnet build src\WslcDesktop\WslcDesktop.csproj -v q --nologo
-dotnet test  tests\WslcDesktop.Tests\WslcDesktop.Tests.csproj --nologo -v q
+dotnet build src\wsld\wsld.csproj -v q --nologo
+dotnet test  tests\wsld.Tests\wsld.Tests.csproj --nologo -v q
 ```
 
 可执行文件输出在
-`src\WslcDesktop\bin\Debug\net9.0-windows10.0.19041.0\win-x64\WslcDesktop.exe`
+`src\wsld\bin\Debug\net9.0-windows10.0.19041.0\win-x64\wsld.exe`
 (注意不是 `bin\x64\Debug`)。
 
 ## 4. 版本组合
@@ -90,7 +90,7 @@ WindowsAppSDK 2.5.1 的 `ProgressRing` 上不存在 `IsRing`,写进 XAML 会报
 应用进程还活着的时候 `dotnet build` 会因为 exe 被占用而失败
 (`MSB3027/MSB3021`),`-v q` 下很容易被忽略。
 于是"改了 A 就崩溃"的结论可能其实是"编译失败,跑的还是上一个坏二进制"。
-每轮之间先 `Get-Process WslcDesktop | Stop-Process -Force`,再构建并确认退出码为 0。
+每轮之间先 `Get-Process wsld | Stop-Process -Force`,再构建并确认退出码为 0。
 ## 9. System.Text.Json 的自定义转换器**不会**被 null 调用
 
 **症状**:`{"Containers":null}` 之后 `public string Containers { get; set; } = ""` 变成真正的 null,
@@ -121,7 +121,7 @@ public string Containers { get => _containers; set => _containers = value ?? "";
 Add-Type -AssemblyName UIAutomationClient, UIAutomationTypes
 $root = [System.Windows.Automation.AutomationElement]::RootElement
 $win  = $root.FindFirst('Children', (New-Object System.Windows.Automation.PropertyCondition(
-          [System.Windows.Automation.AutomationElement]::NameProperty, 'WSLC Desktop')))
+          [System.Windows.Automation.AutomationElement]::NameProperty, 'wsld')))
 $item = $win.FindFirst('Descendants', (New-Object System.Windows.Automation.PropertyCondition(
           [System.Windows.Automation.AutomationElement]::NameProperty, '镜像')))
 # 关键:NavigationViewItem 不支持 InvokePattern("不支持的模式"),要用 SelectionItemPattern
@@ -152,7 +152,7 @@ $item = $win.FindFirst('Descendants', (New-Object System.Windows.Automation.Prop
 
 ## 14. `DataTemplate` 根元素要显式给 `AutomationProperties.Name`
 
-**症状**:UIA 树里每一行的 Name 都是 `WslcDesktop.Core.ViewModels.ImageItemViewModel`,
+**症状**:UIA 树里每一行的 Name 都是 `wsld.Core.ViewModels.ImageItemViewModel`,
 读屏软件念出来全是类名。
 
 **根因**:ListItem 自身没有可读文本时,Name 退化成数据对象的 `ToString()`。
@@ -271,9 +271,9 @@ WinUI 的 `ButtonBase` 监听 `ICommand.CanExecuteChanged`,并把结果**直接�
 **症状**:改了 XAML、`dotnet build` 成功、截图却纹丝不动,像是"改动没生效"。
 
 **根因**:项目里写了 `Platforms=x64`,**通过解决方案构建**时输出落在
-`src\WslcDesktop\bin\x64\Debug\net9.0-windows10.0.19041.0\win-x64\`,
+`src\wsld\bin\x64\Debug\net9.0-windows10.0.19041.0\win-x64\`,
 而**直接构建单个项目 / 历史遗留**的 `bin\Debug\...` 也还在那儿放着上一次的 exe。
-两份并存,`Get-ChildItem -Recurse -Filter WslcDesktop.exe` 会一次返回两个。
+两份并存,`Get-ChildItem -Recurse -Filter wsld.exe` 会一次返回两个。
 
 **修复**:脚本里一律 `Sort-Object LastWriteTime -Descending | Select-Object -First 1`,
 并且把选中的路径和时间打印出来。更稳的做法是构建前先删掉旧输出,或者干脆只走解决方案构建。
@@ -466,7 +466,7 @@ XAML 编译器直接 WMC9997,整个页面报错,但报错位置只到"该行附�
 `XamlParseException: Cannot apply a Style with TargetType 'TextBox' to an object of type 'ComboBox'`。
 空集合的 ItemsControl 一条错误都不会给 —— 于是"页面打开没事、点添加才炸"。
 
-**定位**:App.xaml.cs 本来就挂了 `UnhandledException` 并往 `%LOCALAPPDATA%\WslcDesktop\startup.log` 写全文,
+**定位**:App.xaml.cs 本来就挂了 `UnhandledException` 并往 `%LOCALAPPDATA%\wsld\startup.log` 写全文,
 日志里那句 `[Line: 150 Position: 71]` 直接点到行。事件查看器没有托管堆栈不等于异常不存在:
 先翻应用自己的日志,再怀疑别的(和 #24"先确认跑的是新产物"是同一类教训)。
 

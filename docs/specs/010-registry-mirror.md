@@ -125,7 +125,7 @@ Docker Desktop 那个 `daemon.json → registry-mirrors` 在 wslc 上没有对�
 
 | 项目 | 结果 |
 |---|---|
-| `dotnet build WslcDesktop.sln` | 成功,**0 警告 0 错误** |
+| `dotnet build wsld.sln` | 成功,**0 警告 0 错误** |
 | `dotnet test` | **350 项全绿**(264 项为 001–009 回归,新增 86 项) |
 
 ### 真机验证(Windows 11 + 真实 wslc 3.0.1)
@@ -133,7 +133,7 @@ Docker Desktop 那个 `daemon.json → registry-mirrors` 在 wslc 上没有对�
 | 场景 | 结果 | 截图 |
 |---|---|---|
 | 设置页"镜像加速"卡片 | 通过:标题 / 输入框 / 预览行 / 勾选项 / 说明齐全;填 `https://Docker.1ms.run/` 时预览当场显示"输入 redis:7 时,实际会拉取 docker.1ms.run/library/redis:7"(AC1/AC4) | `docs/screenshots/010-settings-mirror.png` |
-| 原样存盘 | 通过:离开页面后 `%LOCALAPPDATA%\WslcDesktop\settings.json` 出现 `"RegistryMirror": "https://Docker.1ms.run/"` 与 `"RenameMirrorPull": true` —— 带协议、原大小写(AC7) | — |
+| 原样存盘 | 通过:离开页面后 `%LOCALAPPDATA%\wsld\settings.json` 出现 `"RegistryMirror": "https://Docker.1ms.run/"` 与 `"RenameMirrorPull": true` —— 带协议、原大小写(AC7) | — |
 | 这串不像地址 | 通过:预览位置显示"这一串不像注册地址:应写成 registry.example.com,可以带端口或路径前缀。"(AC1) | — |
 | 镜像页的实时预览 | 通过:`redis:7` → "镜像源实际会拉取:docker.1ms.run/library/redis:7";裸名 `hello-world` → "…docker.1ms.run/library/hello-world"(AC2/AC4) | `docs/screenshots/010-images-mirror-pull.png` |
 | 拉取中的进度文案 | 通过:报的是改写后的引用 —— "正在拉取 docker.1ms.run/library/redis:7 · 已等待 N 秒";N 涨到 242 仍未完成,是当时 `docker.1ms.run` 拉 redis 极慢(网络侧),不是应用问题 | 同上 |

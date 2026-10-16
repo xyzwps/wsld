@@ -88,7 +88,7 @@
 
 ### AC11 · 导航
 主窗口左侧出现导航栏,包含"容器""镜像"两项;切换页面不丢失各自的加载状态
-(页面实例常驻,不重复创建);窗口标题保持 `WSLC Desktop`。
+(页面实例常驻,不重复创建);窗口标题保持 `wsld`。
 
 ### AC12 · 不自动轮询
 镜像变化很少,本页 **不做自动刷新**,只提供手动刷新按钮(避免无意义的进程调用)。
@@ -108,7 +108,7 @@
 ## 验证结果
 
 - 单元测试:`dotnet test` 110 个全部通过(功能 003 新增 50 个)。
-- 真实 CLI 冒烟:`WSLC_DESKTOP_INTEGRATION=1` 时 `wslc images --format json` 解析通过(只读)。
+- 真实 CLI 冒烟:`WSLD_INTEGRATION=1` 时 `wslc images --format json` 解析通过(只读)。
 - 界面:应用默认停在"容器"页;用 UI Automation 选中左侧"镜像"后切到镜像页(见开发备忘第 11 条),
   两条镜像的名称、大小、引用数、创建时间与 `wslc images` 表格逐条一致。
 - 截图:`docs/screenshots/003-images.png`(镜像页)、`docs/screenshots/003-containers.png`

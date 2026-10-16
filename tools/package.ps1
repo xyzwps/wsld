@@ -1,10 +1,10 @@
-﻿# WSLC Desktop · 一键出安装包
+﻿# wsld · 一键出安装包
 #
 #   powershell -NoProfile -ExecutionPolicy Bypass -File tools\package.ps1
 #
 # 三步:1) dotnet publish 出"自包含"版本(.NET 运行时 + Windows App SDK 都带在文件夹里,
 # 客户机不用装 .NET);2) 补齐 VC++ 运行库 DLL;3) 用 Inno Setup 编译成一个 setup.exe。
-# 产物在 artifacts\installer\WSLC-Desktop-Setup-<版本>-x64.exe,旁边有个 .sha256 校验文件。
+# 产物在 artifacts\installer\wsld-Setup-<版本>-x64.exe,旁边有个 .sha256 校验文件。
 #
 # 常用参数:
 #   -Version 1.2.3        覆盖版本号(默认读 csproj 里的 <Version>)
@@ -26,8 +26,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $root = Split-Path $PSScriptRoot -Parent
-$proj = Join-Path $root 'src\WslcDesktop\WslcDesktop.csproj'
-$iss  = Join-Path $root 'installer\WslcDesktop.iss'
+$proj = Join-Path $root 'src\wsld\wsld.csproj'
+$iss  = Join-Path $root 'installer\wsld.iss'
 $publishDir = Join-Path $root 'artifacts\publish'
 $installerDir = Join-Path $root 'artifacts\installer'
 
@@ -54,8 +54,8 @@ if (-not $InstallerOnly) {
       -o $publishDir --nologo -v m
   if ($LASTEXITCODE -ne 0) { throw "dotnet publish 失败(exit $LASTEXITCODE)" }
 }
-if (-not (Test-Path (Join-Path $publishDir 'WslcDesktop.exe'))) {
-  throw "$publishDir 里没有 WslcDesktop.exe —— 先跑一次不带 -InstallerOnly 的完整流程"
+if (-not (Test-Path (Join-Path $publishDir 'wsld.exe'))) {
+  throw "$publishDir 里没有 wsld.exe —— 先跑一次不带 -InstallerOnly 的完整流程"
 }
 
 # ---- 2. VC++ 运行库(Windows App SDK 的原生 DLL 要用它) ----
@@ -109,7 +109,7 @@ if ($LASTEXITCODE -ne 0) { throw "ISCC 失败(exit $LASTEXITCODE)" }
 
 # ---- 结果 ----
 $setup = Get-ChildItem $installerDir -Filter '*.exe' |
-         Where-Object { $_.Name -like "WSLC-Desktop-Setup-$Version-x64*" } |
+         Where-Object { $_.Name -like "wsld-Setup-$Version-x64*" } |
          Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if (-not $setup) { throw 'ISCC 报告成功,但没找到产物 exe' }
 # SHA256 自己算(不依赖 Get-FileHash,PowerShell 5.1 各台机器表现不一致)

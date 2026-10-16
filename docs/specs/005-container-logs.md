@@ -165,9 +165,9 @@ null / 空白输入 → 空数组;中间的空行要保留(那确实是日志的
 
 | 项目 | 结果 |
 |---|---|
-| `dotnet build WslcDesktop.sln` | 成功,**0 警告 0 错误** |
+| `dotnet build wsld.sln` | 成功,**0 警告 0 错误** |
 | `dotnet test`(单元测试) | **242 项全绿**,本功能新增 75 项(其余 167 项为功能 001–004,回归通过 → AC17) |
-| `dotnet test --filter RealWslc`(真机集成,`WSLC_DESKTOP_INTEGRATION=1`) | **10 项全绿**,其中日志 3 项:不存在的容器报错文案、未启动容器空输出、真容器 `-n`/`-t`/跟随流式 + 取消后无残留进程 |
+| `dotnet test --filter RealWslc`(真机集成,`WSLD_INTEGRATION=1`) | **10 项全绿**,其中日志 3 项:不存在的容器报错文案、未启动容器空输出、真容器 `-n`/`-t`/跟随流式 + 取消后无残留进程 |
 
 新增测试文件:`LogQueryTests`(9)、`WslcLogTextTests`(13)、`LogsServiceTests`(15)、
 `LogsPageViewModelTests`(23)、`RealWslcLogsIntegrationTests`(3),另加 4 个真实输出夹具。

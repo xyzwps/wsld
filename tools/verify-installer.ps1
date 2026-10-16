@@ -7,7 +7,7 @@
 [CmdletBinding()]
 param(
   [string]$Setup,                       # 默认取 artifacts\installer 里最新的 setup.exe
-  [string]$AppDir,                      # 默认 %LOCALAPPDATA%\Programs\WSLC Desktop
+  [string]$AppDir,                      # 默认 %LOCALAPPDATA%\Programs\wsld
   [switch]$KeepInstalled
 )
 
@@ -18,7 +18,7 @@ if (-not $Setup) {
             Sort-Object LastWriteTime -Descending | Select-Object -First 1).FullName
 }
 if (-not $Setup -or -not (Test-Path $Setup)) { throw '找不到安装包,先跑 just package' }
-if (-not $AppDir) { $AppDir = Join-Path $env:LOCALAPPDATA 'Programs\WSLC Desktop' }
+if (-not $AppDir) { $AppDir = Join-Path $env:LOCALAPPDATA 'Programs\wsld' }
 
 $log = Join-Path $env:TEMP ('wslc-setup-{0:yyyyMMdd-HHmmss}.log' -f (Get-Date))
 $fail = 0
@@ -30,14 +30,14 @@ function Check([string]$name, [bool]$ok, [string]$detail = '') {
 Write-Host "安装包: $Setup"
 Write-Host ("大小  : {0:N1} MB`n" -f ((Get-Item $Setup).Length / 1MB))
 
-Stop-Process -Name WslcDesktop -ErrorAction SilentlyContinue
+Stop-Process -Name wsld -ErrorAction SilentlyContinue
 Start-Sleep -Seconds 2
 
 $installArgs = @('/CURRENTUSER', '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART', "/LOG=$log")
 $p = Start-Process -FilePath $Setup -PassThru -Wait -ArgumentList $installArgs
 Check '静默安装退出码' ($p.ExitCode -eq 0) "(exit=$($p.ExitCode))"
 
-$exe = Join-Path $AppDir 'WslcDesktop.exe'
+$exe = Join-Path $AppDir 'wsld.exe'
 Check '主程序已落盘' (Test-Path $exe) $exe
 $files = @(Get-ChildItem $AppDir -Recurse -File -ErrorAction SilentlyContinue)
 Check '文件数量合理' ($files.Count -gt 300) "($($files.Count) 个)"
@@ -64,7 +64,7 @@ if ($KeepInstalled) {
   }
   Start-Sleep -Seconds 3
   Check '安装目录已清空' (-not (Test-Path $AppDir))
-  $sm = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\WSLC Desktop.lnk'
+  $sm = Join-Path $env:APPDATA 'Microsoft\Windows\Start Menu\Programs\wsld.lnk'
   Check '开始菜单快捷方式已移除' (-not (Test-Path $sm))
   $arp = @(Get-ChildItem 'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall' -ErrorAction SilentlyContinue |
            Where-Object { $_.PSChildName -like '*7498251D*' })

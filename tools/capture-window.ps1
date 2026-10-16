@@ -1,4 +1,4 @@
-param([string]$ProcessName = "WslcDesktop", [string]$OutFile = "capture.png")
+param([string]$ProcessName = "wsld", [string]$OutFile = "capture.png")
 Add-Type -AssemblyName System.Drawing
 $src = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot "win32-cap.cs")
 Add-Type -TypeDefinition $src

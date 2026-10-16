@@ -20,11 +20,11 @@ wslc 是命令行工具,快速浏览"现在有什么容器在跑、状态如何"
 - AC1 启动应用后自动加载一次列表;失败不崩溃,在页面顶部显示错误条,并保留上一次成功数据。
 - AC2 `wslc list` 无输出(没有任何容器)时,显示"没有容器",不视为错误。
 - AC3 输出为 NDJSON(每行一个 JSON 对象);解析器必须同时兼容:空串 / 单个对象 / 多行对象 / 标准 JSON 数组 / 美化缩进 JSON。解析失败抛出带行号与原文片段的错误。
-- AC4 字段映射基于真实输出(见 tests/WslcDesktop.Tests/Fixtures/*.ndjson):ID、Names、Image、Command、Status、State、RunningFor、CreatedAt、Ports、Networks、Labels、Size、HealthStatus、Platform{architecture,os}。
+- AC4 字段映射基于真实输出(见 tests/wsld.Tests/Fixtures/*.ndjson):ID、Names、Image、Command、Status、State、RunningFor、CreatedAt、Ports、Networks、Labels、Size、HealthStatus、Platform{architecture,os}。
 - AC5 State 为 `running`(不区分大小写)判定为运行中,计入"运行中"数量并显示绿色状态点,否则灰色。
 - AC6 搜索框输入立即过滤当前已加载数据(不重新调用 CLI);切换"显示已停止"同理。
 - AC7 自动刷新定时器触发时若上一次刷新未完成(防抖动/重入),跳过本次。
-- AC8 CLI 进程定位:环境变量 `WSLC_DESKTOP_WSLC_PATH` > `%ProgramFiles%\WSL\wslc.exe` > PATH 中的 wslc.exe。找不到时错误信息明确指引用户安装 WSL 3。
+- AC8 CLI 进程定位:环境变量 `WSLD_WSLC_PATH` > `%ProgramFiles%\WSL\wslc.exe` > PATH 中的 wslc.exe。找不到时错误信息明确指引用户安装 WSL 3。
 - AC9 非零退出码视为错误,错误文案包含 wslc 的 stderr 内容。
 
 ## 接口与数据
