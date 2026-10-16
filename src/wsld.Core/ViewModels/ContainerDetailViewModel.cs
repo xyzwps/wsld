@@ -1,6 +1,7 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using wsld.Core.Models;
+using wsld.Core.Parsing;
 using wsld.Core.Services;
 using wsld.Core.WslcCli;
 using static wsld.Core.I18n.Loc;
@@ -29,7 +30,8 @@ public sealed partial class ContainerDetailViewModel : ObservableObject
     [ObservableProperty] private string _createdAt = "";
     [ObservableProperty] private string _ports = "";
     [ObservableProperty] private string _networks = "";
-    [ObservableProperty] private string _labels = "";
+    [ObservableProperty] private IReadOnlyList<ContainerLabel> _labelEntries = [];
+    [ObservableProperty] private bool _hasLabels;
     [ObservableProperty] private string _size = "";
     [ObservableProperty] private string _healthStatus = "";
     [ObservableProperty] private string _platform = "";
@@ -94,7 +96,8 @@ public sealed partial class ContainerDetailViewModel : ObservableObject
         CreatedAt = c.CreatedAt;
         Ports = string.IsNullOrWhiteSpace(c.Ports) ? "—" : c.Ports;
         Networks = string.IsNullOrWhiteSpace(c.Networks) ? "—" : c.Networks;
-        Labels = string.IsNullOrWhiteSpace(c.Labels) ? "—" : c.Labels;
+        LabelEntries = ContainerLabelParser.Parse(c.Labels);
+        HasLabels = LabelEntries.Count > 0;
         Size = string.IsNullOrWhiteSpace(c.Size) ? "—" : c.Size;
         HealthStatus = string.IsNullOrWhiteSpace(c.HealthStatus) ? "—" : c.HealthStatus;
         Platform = c.Platform is { } p && (!string.IsNullOrEmpty(p.OS) || !string.IsNullOrEmpty(p.Architecture))

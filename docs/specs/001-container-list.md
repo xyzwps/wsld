@@ -21,6 +21,7 @@ wslc 是命令行工具,快速浏览"现在有什么容器在跑、状态如何"
 - AC2 `wslc list` 无输出(没有任何容器)时,显示"没有容器",不视为错误。
 - AC3 输出为 NDJSON(每行一个 JSON 对象);解析器必须同时兼容:空串 / 单个对象 / 多行对象 / 标准 JSON 数组 / 美化缩进 JSON。解析失败抛出带行号与原文片段的错误。
 - AC4 字段映射基于真实输出(见 tests/wsld.Tests/Fixtures/*.ndjson):ID、Names、Image、Command、Status、State、RunningFor、CreatedAt、Ports、Networks、Labels、Size、HealthStatus、Platform{architecture,os}。
+  其中 `Labels` 是一整条逗号拼接的串,详情里拆成"键一行、值一行"显示(`ContainerLabelParser`:逗号在引号/括号之外、且后面紧跟 `键名=` 才算边界);这串本身有歧义,值里写了 `,foo=bar` 会被多拆一条,但不会丢数据。
 - AC5 State 为 `running`(不区分大小写)判定为运行中,计入"运行中"数量并显示绿色状态点,否则灰色。
 - AC6 搜索框输入立即过滤当前已加载数据(不重新调用 CLI);切换"显示已停止"同理。
 - AC7 自动刷新定时器触发时若上一次刷新未完成(防抖动/重入),跳过本次。
