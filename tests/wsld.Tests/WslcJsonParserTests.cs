@@ -2,10 +2,11 @@ using wsld.Core.Parsing;
 
 namespace wsld.Tests;
 
-/// <summary>功能 001 · AC2/AC3/AC4:NDJSON 兼容性与字段映射。</summary>
+/// <summary>册子 CL-002、CL-003、CL-004、CL-016、CL-017、CD-007:容器 JSON 的排版兼容性与字段映射。</summary>
 public class WslcJsonParserTests
 {
     [Fact]
+    [Trait("case", "CL-004")]
     public void EmptyOutput_ReturnsEmptyList_NotError()
     {
         var items = WslcJsonParser.ParseContainers("");
@@ -13,6 +14,7 @@ public class WslcJsonParserTests
     }
 
     [Theory]
+    [Trait("case", "CL-004")]
     [InlineData("\r\n")]
     [InlineData("   ")]
     [InlineData("\n\n")]
@@ -22,6 +24,7 @@ public class WslcJsonParserTests
     }
 
     [Fact]
+    [Trait("case", "CL-016")]
     public void SingleObject_IsSupported()
     {
         var items = WslcJsonParser.ParseContainers("""{"ID":"abc","Names":"one"}""");
@@ -30,6 +33,8 @@ public class WslcJsonParserTests
     }
 
     [Fact]
+    [Trait("case", "CL-016")]
+    [Trait("case", "CD-007")]
     public void NdjsonMultipleLines_MapRealFields()
     {
         // 与本机 wslc 3.0.1 输出一致的样例(Fixtures 与内联两条)。
@@ -50,6 +55,7 @@ public class WslcJsonParserTests
     }
 
     [Fact]
+    [Trait("case", "CL-016")]
     public void TwoNdjsonLines_ReturnsTwoContainers()
     {
         var text = FixtureLoader.Read("wslc-list-exited.ndjson").Trim()
@@ -60,6 +66,7 @@ public class WslcJsonParserTests
     }
 
     [Fact]
+    [Trait("case", "CL-003")]
     public void ExitedState_IsNotRunning()
     {
         var items = WslcJsonParser.ParseContainers(FixtureLoader.Read("wslc-list-exited.ndjson"));
@@ -69,6 +76,7 @@ public class WslcJsonParserTests
     }
 
     [Fact]
+    [Trait("case", "CL-016")]
     public void JsonArray_IsSupported()
     {
         var text = """[{"ID":"a1","Names":"x","State":"running"},{"ID":"b2","Names":"y","State":"exited"}]""";
@@ -79,6 +87,7 @@ public class WslcJsonParserTests
     }
 
     [Fact]
+    [Trait("case", "CL-016")]
     public void PrettyPrintedJson_IsSupported()
     {
         var text = """
@@ -96,6 +105,7 @@ public class WslcJsonParserTests
     }
 
     [Fact]
+    [Trait("case", "CL-017")]
     public void BadLine_ReportsLineNumberAndSnippet()
     {
         var text = """
@@ -108,6 +118,7 @@ public class WslcJsonParserTests
     }
 
     [Fact]
+    [Trait("case", "CL-002")]
     public void DisplayName_StripsLeadingSlashAndTakesFirstName()
     {
         var items = WslcJsonParser.ParseContainers("""{"ID":"z","Names":"/web,alias1"}""");

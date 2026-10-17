@@ -5,13 +5,14 @@ using wsld.Core.WslcCli;
 namespace wsld.Tests;
 
 /// <summary>
-/// 针对真实 wslc 的端到端冒烟测试。默认跳过,只在设置了环境变量
+/// 针对真实 wslc 的端到端冒烟测试,对的是册子 container-actions.md(CA)与
+/// container-list.md(CL)里那些只有真机才能验的条款。默认跳过,只在设置了环境变量
 /// WSLD_INTEGRATION=1 时运行(单元测试不应该依赖本机是否装了 WSL,
 /// 也不应该在 CI 上创建容器)。
 ///
 /// 运行:
-///   $env:WSLD_INTEGRATION = "1"
-///   dotnet test --filter FullyQualifiedName~RealWslcIntegrationTests
+/// $env:WSLD_INTEGRATION = "1"
+/// dotnet test --filter FullyQualifiedName~RealWslcIntegrationTests
 ///
 /// 它会自己创建并删除一个专用容器,不碰用户已有的容器。
 /// </summary>
@@ -22,6 +23,13 @@ public class RealWslcIntegrationTests
     private const string DefaultImage = "docker.1ms.run/library/busybox:latest";
 
     [Fact]
+    [Trait("case", "CA-001")]
+    [Trait("case", "CA-002")]
+    [Trait("case", "CA-003")]
+    [Trait("case", "CA-005")]
+    [Trait("case", "CA-011")]
+    [Trait("case", "CA-012")]
+    [Trait("case", "CA-017")]
     public async Task LifecycleRoundTrip_OnRealWslc()
     {
         if (Environment.GetEnvironmentVariable(Enabled) != "1") return;
@@ -58,7 +66,7 @@ public class RealWslcIntegrationTests
             Assert.True(await WaitUntilAsync(service, shortId, state => state == "running"),
                 "restart 之后应为 running");
 
-            // 运行中直接删除必须失败,这正是 UI 需要 -f 的实测依据(功能 002)。
+            // 运行中直接删除必须失败,这正是 UI 需要 -f 的实测依据(册子 CA-005)。
             var refused = await Assert.ThrowsAsync<WslcCliException>(() => service.RemoveAsync(shortId));
             Assert.Contains("WSLC_E_CONTAINER_IS_RUNNING", refused.Result.StdErr);
 
@@ -73,6 +81,7 @@ public class RealWslcIntegrationTests
     }
 
     [Fact]
+    [Trait("case", "CL-001")]
     public async Task ListAsync_OnRealWslc_ReturnsWithoutError()
     {
         if (Environment.GetEnvironmentVariable(Enabled) != "1") return;

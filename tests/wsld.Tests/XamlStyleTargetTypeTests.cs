@@ -3,8 +3,9 @@ using System.Text.RegularExpressions;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 012 的防回归闸:XAML 里 Style 的 TargetType 必须和贴它的元素类型对得上。
-/// 起因是端口行里的协议下拉框误用了文本框样式,编译器一声不吭,
+/// 防回归闸(工程闸,不属册子 Scenario,故不挂册子编号):XAML 里 Style 的 TargetType
+/// 必须和贴它的元素类型对得上。这类错对不上任何一条用户可见契约——它守的是"某类界面崩溃
+/// 不再出现"。起因是命令编排页端口行里的协议下拉框误用了文本框样式,编译器一声不吭,
 /// 直到用户点「添加端口」长出新行那一刻才抛 XamlParseException,整个应用直接退出。
 /// 这类错只在运行时暴露,所以放在单测里当静态检查用。
 /// </summary>

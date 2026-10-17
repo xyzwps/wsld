@@ -6,7 +6,7 @@ using wsld.Core.WslcCli;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 004 · AC10/AC11:强制删除的策略。
+/// 册子 IA-001、IA-013、IA-014、IA-015、IA-016、IA-019、IA-020、IA-021、IM-002:强制删除的策略。
 /// 实测只有 `wslc rmi -f` 才能删掉被容器引用的镜像,而它会把镜像真的从磁盘上拿走、
 /// 让引用它的容器再也起不来,所以这个参数只能由"常规删除失败 + 用户第二次确认"触发。
 /// </summary>
@@ -32,9 +32,11 @@ public class ImageForcePolicyTests
         如果此错误是意外错误，请考虑搜索现有问题或在 https://github.com/microsoft/WSL/issues 提交新问题。
         """;
 
-    // ---------- AC10 · 冲突识别 ----------
+    // ---------- 冲突识别 ----------
 
     [Theory]
+    [Trait("case", "IA-014")]
+    [Trait("case", "IA-015")]
     [InlineData(ConflictStdErr, true)]
     [InlineData("""container x is using its referenced image y (must force)""", true)]
     [InlineData("""MUST FORCE""", true)]
@@ -48,6 +50,8 @@ public class ImageForcePolicyTests
         Assert.Equal(expected, ImageRemovalConflict.Contains(text));
 
     [Fact]
+    [Trait("case", "IA-014")]
+    [Trait("case", "IA-015")]
     public void ConflictDetection_ReadsStdoutTooAndIgnoresForeignExceptions()
     {
         var inStdOut = new WslcCliException("wslc rmi", new WslcCliResult(1, ConflictStdErr, ""));
@@ -59,9 +63,11 @@ public class ImageForcePolicyTests
         Assert.False(ImageRemovalConflict.IsConflict(new InvalidOperationException(ConflictStdErr)));
     }
 
-    // ---------- AC10 · 被占用 → 按钮升级为"强制删除" ----------
+    // ---------- 被占用 → 按钮升级为"强制删除" ----------
 
     [Fact]
+    [Trait("case", "IA-013")]
+    [Trait("case", "IA-014")]
     public async Task Remove_Conflict_FirstAttemptSendsNoForceAndUpgradesTheRow()
     {
         var cli = new RoutingWslcCli { ListJson = TwoRows }.AlwaysFor("rmi", 1, "", ConflictStdErr);
@@ -81,6 +87,7 @@ public class ImageForcePolicyTests
     }
 
     [Fact]
+    [Trait("case", "IA-015")]
     public async Task Remove_OtherFailureDoesNotOfferTheDestructiveOption()
     {
         var cli = new RoutingWslcCli { ListJson = TwoRows }.AlwaysFor("rmi", 1, "", NotFoundStdErr);
@@ -89,15 +96,17 @@ public class ImageForcePolicyTests
 
         await vm.ExecuteRemoveAsync(row);
 
-        Assert.False(row.ForcePending);                 // AC10:非冲突失败不升级按钮
+        Assert.False(row.ForcePending);                 // 非冲突失败不升级按钮
         Assert.Equal("删除", row.RemoveLabel);
         Assert.DoesNotContain("强制删除", vm.Error);
         Assert.Contains("WSLC_E_IMAGE_NOT_FOUND", vm.Error);
     }
 
-    // ---------- AC11 · 第二次显式动作才真的强制 ----------
+    // ---------- 第二次显式动作才真的强制 ----------
 
     [Fact]
+    [Trait("case", "IA-016")]
+    [Trait("case", "IA-019")]
     public async Task SecondRemoveFromTheRowItselfSendsForceAndResetsTheState()
     {
         var cli = new RoutingWslcCli { ListJson = TwoRows };
@@ -119,14 +128,16 @@ public class ImageForcePolicyTests
         await row.RemoveCommand.ExecuteAsync(null);           // 第二次:由行对象自己决定是否强制
 
         Assert.Equal(new[] { "rmi", "-f", BusyBoxRef }, cli.LastCall("rmi"));
-        Assert.False(row.ForcePending);                       // AC11:用完即复位
+        Assert.False(row.ForcePending);                       // 用完即复位
         Assert.Equal("删除", row.RemoveLabel);
         Assert.Equal("已删除 " + BusyBoxRef, vm.Notice);
-        Assert.Equal(imagesBefore + 1, cli.CountCalls("images"));   // AC8:成功后刷新一次
+        Assert.Equal(imagesBefore + 1, cli.CountCalls("images"));   // 成功后刷新一次
         Assert.False(vm.IsBusy);
     }
 
     [Fact]
+    [Trait("case", "IA-001")]
+    [Trait("case", "IA-016")]
     public async Task ForceIsNeverDefault_OnlyWhenExplicitlyAsked()
     {
         var cli = new RoutingWslcCli { ListJson = TwoRows };
@@ -139,9 +150,10 @@ public class ImageForcePolicyTests
         Assert.Equal(new[] { "rmi", "-f", "docker.1ms.run/library/hello-world:latest" }, cli.LastCall("rmi"));
     }
 
-    // ---------- AC12 · 强制状态活过刷新 ----------
+    // ---------- 强制状态活过刷新 ----------
 
     [Fact]
+    [Trait("case", "IA-020")]
     public async Task ForcePendingSurvivesRefreshWhileImageIsStillInUse()
     {
         var cli = new RoutingWslcCli { ListJson = TwoRows }.AlwaysFor("rmi", 1, "", ConflictStdErr);
@@ -159,6 +171,7 @@ public class ImageForcePolicyTests
     }
 
     [Fact]
+    [Trait("case", "IA-021")]
     public async Task ForcePendingIsDroppedWhenTheImageIsNoLongerInUse()
     {
         var cli = new RoutingWslcCli { ListJson = TwoRows }.AlwaysFor("rmi", 1, "", ConflictStdErr);
@@ -176,6 +189,7 @@ public class ImageForcePolicyTests
     // ---------- 行对象的数据转发(界面绑定用) ----------
 
     [Fact]
+    [Trait("case", "IM-002")]
     public void RowObject_ForwardsImageFields()
     {
         var vm = Create(new RoutingWslcCli { ListJson = TwoRows });
@@ -189,7 +203,7 @@ public class ImageForcePolicyTests
         Assert.Contains("ID aaef90e06523", row.SubtleLine);
         Assert.StartsWith("docker.1ms.run/library/busybox:latest", row.DisplayName);
 
-        // 删除按钮走的是行对象自己的判断(AC11)
+        // 删除按钮走的是行对象自己的判断
         row.ForcePending = true;
         Assert.True(row.RemoveCommand.CanExecute(null));
     }
@@ -197,7 +211,7 @@ public class ImageForcePolicyTests
     private static ImagesPageViewModel Create(RoutingWslcCli cli) =>
         new(new ImagesService(cli), uiThread: null);
 
-    /// <summary>行数据换成新对象后,引用仍然稳定(AC12 的前提)。</summary>
+    /// <summary>行数据换成新对象后,引用仍然稳定(这是删除按引用续用的前提)。</summary>
     [Fact]
     public void ReferenceStaysStableAcrossParsedCopies()
     {

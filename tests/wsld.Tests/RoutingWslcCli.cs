@@ -5,7 +5,7 @@ namespace wsld.Tests;
 
 /// <summary>
 /// 按命令动词路由的假 CLI。
-/// 功能 004 用它区分"列表"和"操作";功能 005 加上容器列表(日志页的下拉)与逐行回调(跟随)。
+/// image-actions 册 用它区分"列表"和"操作";container-logs 册 加上容器列表(日志页的下拉)与逐行回调(跟随)。
 /// 之所以要路由,是因为一次操作成功后 ViewModel 会再刷新一次列表,
 /// 单纯按顺序排脚本的命令序列很容易被刷新调用打乱。
 /// </summary>
@@ -17,13 +17,13 @@ public sealed class RoutingWslcCli : IWslcCli
     /// <summary>镜像列表命令的返回内容(NDJSON)。</summary>
     public string ListJson { get; set; } = "";
 
-    /// <summary>容器列表命令(list -a --format json)的返回内容(NDJSON),功能 005 的容器下拉用它(AC15)。</summary>
+    /// <summary>容器列表命令(list -a --format json)的返回内容(NDJSON),container-logs 册 的容器下拉用它。</summary>
     public string ContainersJson { get; set; } = "";
 
     /// <summary>非列表命令的接管者;用于制造"进程还在跑"的场景。</summary>
     public Func<IReadOnlyList<string>, CancellationToken, Task<WslcCliResult>>? ActionHandler { get; set; }
 
-    /// <summary>逐行回调命令的接管者;用于制造"跟随还在流"的场景(AC7/AC8/AC12)。</summary>
+    /// <summary>逐行回调命令的接管者;用于制造"跟随还在流"的场景。</summary>
     public Func<IReadOnlyList<string>, Action<string>?, CancellationToken, Task<WslcCliResult>>? StreamHandler { get; set; }
 
     public List<IReadOnlyList<string>> Calls { get; } = new();
@@ -31,7 +31,7 @@ public sealed class RoutingWslcCli : IWslcCli
     /// <summary>只记录走了逐行回调路径的调用。</summary>
     public List<IReadOnlyList<string>> StreamCalls { get; } = new();
 
-    /// <summary>伪终端路径的接管者(功能 011):制造"拉取中途一帧帧上屏"的场景。</summary>
+    /// <summary>伪终端路径的接管者(pull-progress 册):制造"拉取中途一帧帧上屏"的场景。</summary>
     public Func<IReadOnlyList<string>, Action<IReadOnlyList<string>>?, CancellationToken, Task<WslcCliResult>>? ConsoleHandler { get; set; }
 
     /// <summary>只记录走伪终端的调用(pull 才有)。</summary>
@@ -48,7 +48,7 @@ public sealed class RoutingWslcCli : IWslcCli
         return this;
     }
 
-    /// <summary>排一个逐行返回的脚本(AC7):每行立刻交给回调。</summary>
+    /// <summary>排一个逐行返回的脚本:每行立刻交给回调。</summary>
     public RoutingWslcCli EnqueueStream(int exitCode, string stdout, string stderr = "")
     {
         _scriptedStreams.Enqueue((exitCode, WslcLogText.Split(stdout), stderr));
@@ -130,7 +130,7 @@ public sealed class RoutingWslcCli : IWslcCli
     }
 
     /// <summary>
-    /// 伪终端路径(功能 011):记录调用后按脚本给结果,并把屏幕行一次性回调出去 ——
+    /// 伪终端路径(pull-progress 册):记录调用后按脚本给结果,并把屏幕行一次性回调出去 ——
     /// 与真实现"结束时屏幕上就是这些行"等价;要测中途的帧就换 <see cref="ConsoleHandler"/>。
     /// </summary>
     public async Task<WslcCliResult> RunWithConsoleAsync(

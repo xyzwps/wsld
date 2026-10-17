@@ -572,3 +572,40 @@ ListView 按"7 行全放得下"排版,`ScrollViewer` 按"内容多长我多长"�
 另外留白要放在面板自己的 `Padding` 上,别放 `ScrollViewer.Padding` ——
 后者会让"视口宽"比内容可用宽度多出 24,内容就横向溢出了。
 横向滚动仍然要关着(`HorizontalScrollMode="Disabled"`),否则一条长标签就能把可滚动范围撑得比视口宽。
+
+## 44. 想要"两个页签":TabView 的 + 关不掉;自建 RadioButton 页签的视觉态必须成对写
+
+**症状 1**:容器详情区加「详情 / 日志」两个页签,第一反应是 `TabView`。XAML 里写
+`IsAddButtonVisible="False"` 直接编译报错:
+
+```
+XamlCompiler error WMC0011: Unknown member 'IsAddButtonVisible' on element 'TabView'
+```
+
+而运行时页签条右边照样杵着一个"+"按钮(新建标签)。`IsCloseButtonVisible` 同样不存在
+(关闭按钮是逐项的 `TabViewItem.IsClosable`)。也就是说 Windows App SDK 2.5 这一版上,
+那个 + 没有可写的属性可关。
+
+**做法 1**:两页签这种固定数量、不可新建、不可关闭的场景,别用 `TabView`。
+用两个 `RadioButton`(`GroupName` 同一组)+ 自定义模板:选中时显示一条下划线。
+内容区也不塞进页签的 `Content` —— 两块面板各自放在同一行里按可见性切换,
+切页签就不会把日志的滚动位置和已显示的行重建掉。
+
+**症状 2**:上面那个模板只写了 `Checked` 视觉态,把下划线 `Opacity` 动到 1。
+结果切到第二个页签后,**两个页签都带着下划线** —— 取消勾选时没有任何状态把透明度收回去。
+
+**做法 2**:`VisualStateManager` 不是"只描述特殊态"的地方,离开那个态时谁复位必须写清楚。
+成对补上 `Normal` / `Unchecked`,里面把 `Opacity` 复位成 0(颜色同理):
+
+```xml
+<VisualState x:Name="Unchecked">
+  <Storyboard>
+    <DoubleAnimation Storyboard.TargetName="Underline"
+                     Storyboard.TargetProperty="Opacity" To="0" Duration="0" />
+  </Storyboard>
+</VisualState>
+```
+
+**顺带一条实测**:`wslc logs -f` 会先把**全部历史**冲出来再持续追加,所以"只看新行"不能只靠 `-f`;
+配上 `--since <Unix 秒>` 才行 —— 实测 `--since` 连 `-f` 开头那次历史冲刷一起过滤,
+起点之后的行才吐(功能 005 的实时日志就是这么实现的)。

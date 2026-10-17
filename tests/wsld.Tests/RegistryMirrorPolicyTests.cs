@@ -3,7 +3,9 @@ using wsld.Core.Services;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 010 · AC1/AC2/AC3:镜像源地址的规范化,以及"把引用改写成镜像站地址"的规则。
+/// 册子 RM-001–RM-012 · 「地址这一栏认得下用户怎么写」与「改写表说的是 Docker 那一套规矩」:
+/// 镜像源地址的规范化,以及"把引用改写成镜像站地址"的规则(另挂 RM-016/RM-019,
+/// 即改写结果必须同时留住用户原引用与生效引用,供改名与成功提示用)。
 /// 规则对齐 Docker 的引用规范化:裸名字算 Docker Hub 官方库(补 library/),
 /// 已经写全域名的非 Hub 仓库一律不碰。
 /// </summary>
@@ -11,9 +13,12 @@ public class RegistryMirrorPolicyTests
 {
     private const string Mirror = "docker.1ms.run";
 
-    // ---------- AC1 · 地址规范化 ----------
+    // ---------- 地址规范化 ----------
 
     [Theory]
+    [Trait("case", "RM-001")]
+    [Trait("case", "RM-002")]
+    [Trait("case", "RM-004")]
     [InlineData(null, "")]
     [InlineData("", "")]
     [InlineData("   ", "")]
@@ -32,6 +37,7 @@ public class RegistryMirrorPolicyTests
         Assert.Equal(expected, RegistryMirrorPolicy.Normalize(raw));
 
     [Theory]
+    [Trait("case", "RM-003")]
     [InlineData("example")]           // 既没有点也没有端口,不像是注册地址
     [InlineData("docker 1ms.run")]    // 中间有空格
     [InlineData("://")]
@@ -42,6 +48,7 @@ public class RegistryMirrorPolicyTests
         Assert.Equal("", RegistryMirrorPolicy.Normalize(raw));
 
     [Fact]
+    [Trait("case", "RM-003")]
     public void TryNormalize_TellsTheSettingsPageWhetherTheInputIsUsable()
     {
         Assert.True(RegistryMirrorPolicy.TryNormalize(" https://Docker.1ms.run/ ", out var good));
@@ -52,15 +59,20 @@ public class RegistryMirrorPolicyTests
     }
 
     [Fact]
+    [Trait("case", "RM-001")]
+    [Trait("case", "RM-002")]
     public void Normalize_LowercasesHostButKeepsPathPrefixAsIs()
     {
         // 主机名不区分大小写;路径前缀可能区分,原样留着。
         Assert.Equal("registry.example.com/Mirror", RegistryMirrorPolicy.Normalize("https://Registry.Example.com/Mirror"));
     }
 
-    // ---------- AC2 · Docker Hub 的名字走镜像站 ----------
+    // ---------- Docker Hub 的名字走镜像站 ----------
 
     [Theory]
+    [Trait("case", "RM-007")]
+    [Trait("case", "RM-008")]
+    [Trait("case", "RM-009")]
     [InlineData("redis:7", Mirror + "/library/redis:7")]
     [InlineData("nginx", Mirror + "/library/nginx")]
     [InlineData("nginx:latest", Mirror + "/library/nginx:latest")]
@@ -83,6 +95,8 @@ public class RegistryMirrorPolicyTests
     }
 
     [Fact]
+    [Trait("case", "RM-016")]
+    [Trait("case", "RM-019")]
     public void Rewrite_KeepsBothTheOriginalAndTheEffectiveReference()
     {
         // 界面提示与改名都要用回用户写的那个名字。
@@ -93,6 +107,8 @@ public class RegistryMirrorPolicyTests
     }
 
     [Fact]
+    [Trait("case", "RM-002")]
+    [Trait("case", "RM-007")]
     public void Rewrite_WithPortOrPathPrefixMirror_KeepsBoth()
     {
         Assert.Equal("localhost:5000/library/redis:7", RegistryMirrorPolicy.Rewrite("redis:7", "localhost:5000").Reference);
@@ -102,11 +118,14 @@ public class RegistryMirrorPolicyTests
     }
 
     [Fact]
+    [Trait("case", "RM-007")]
     public void OfficialNamespace_IsLibrary() => Assert.Equal("library", RegistryMirrorPolicy.OfficialNamespace);
 
-    // ---------- AC3 · 别的注册表和已经写全的名字不碰 ----------
+    // ---------- 别的注册表和已经写全的名字不碰 ----------
 
     [Theory]
+    [Trait("case", "RM-011")]
+    [Trait("case", "RM-012")]
     [InlineData("ghcr.io/org/app:1")]
     [InlineData("quay.io/prometheus/node-exporter:v1.8.2")]
     [InlineData("mcr.microsoft.com/dotnet/runtime:8.0")]
@@ -127,6 +146,8 @@ public class RegistryMirrorPolicyTests
     }
 
     [Theory]
+    [Trait("case", "RM-003")]
+    [Trait("case", "RM-004")]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("not a host")]
@@ -140,9 +161,11 @@ public class RegistryMirrorPolicyTests
         Assert.Equal("", result.Mirror);
     }
 
-    // ---------- :tag 与 @digest 的尾巴必须原样跟着 ----------
+    // ---------- tag 与 @digest 的尾巴必须原样跟着 ----------
 
     [Theory]
+    [Trait("case", "RM-010")]
+    [Trait("case", "RM-011")]
     [InlineData("alpine@sha256:aaaa", Mirror + "/library/alpine@sha256:aaaa")]
     [InlineData("bitnami/redis@sha256:bbbb", Mirror + "/bitnami/redis@sha256:bbbb")]
     [InlineData("redis:7@sha256:cccc", Mirror + "/library/redis:7@sha256:cccc")]
@@ -157,6 +180,7 @@ public class RegistryMirrorPolicyTests
     }
 
     [Fact]
+    [Trait("case", "RM-011")]
     public void Rewrite_ColonInsideAHostIsNotMistakenForATagSeparator()
     {
         // localhost:5000/redis 里的冒号属于端口;补的是镜像站前缀,不是 :latest。

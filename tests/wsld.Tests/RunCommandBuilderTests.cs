@@ -3,7 +3,7 @@ using wsld.Core.Services;
 
 namespace wsld.Tests;
 
-/// <summary>功能 012:wslc run 命令的拼装 / 校验 / 读回(纯逻辑,不起进程)。</summary>
+/// <summary>册子 RB:wslc run 命令的拼装 / 校验 / 读回(纯逻辑,不起进程)。覆盖 RB-003、RB-005–RB-009、RB-011–RB-019、RB-028–RB-034、RB-050。</summary>
 public class RunCommandBuilderTests
 {
     private static RunSpec FullSpec()
@@ -47,6 +47,8 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-005")]
+    [Trait("case", "RB-050")]
     public void Build_FixedOrder_FlagsThenOptionsThenPositionals()
     {
         var args = RunCommandBuilder.Build(FullSpec());
@@ -69,6 +71,8 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-006")]
+    [Trait("case", "RB-007")]
     public void Build_SkipsEmptyRowsAndEmptyOptions()
     {
         var spec = new RunSpec { Image = "x", Name = "  ", Detach = false };
@@ -97,6 +101,7 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-003")]
     public void Display_IsBuiltArgsTokenForToken_PreviewEqualsExecution()
     {
         var spec = FullSpec();
@@ -106,6 +111,7 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-008")]
     public void Validate_BareSpec_OnlyComplaintIsMissingImage()
     {
         var issue = Assert.Single(RunCommandBuilder.Validate(new RunSpec()));
@@ -114,6 +120,10 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-009")]
+    [Trait("case", "RB-011")]
+    [Trait("case", "RB-012")]
+    [Trait("case", "RB-013")]
     public void Validate_PortRows_ContainerMissingNumberRangeMismatchAndProtocol()
     {
         var spec = new RunSpec { Image = "x" };
@@ -141,6 +151,7 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-012")]
     public void Validate_PortsAcceptSingleNumbersAndValidRanges()
     {
         var spec = new RunSpec { Image = "x" };
@@ -152,6 +163,7 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-011")]
     public void Validate_PortZeroAndDescendingRange_AreNotPorts()
     {
         var spec = new RunSpec { Image = "x" };
@@ -165,6 +177,10 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-014")]
+    [Trait("case", "RB-015")]
+    [Trait("case", "RB-016")]
+    [Trait("case", "RB-017")]
     public void Validate_VolumesTmpfsEnvLabel_FlagTheirRespectiveRows()
     {
         var spec = new RunSpec { Image = "x" };
@@ -191,6 +207,8 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-018")]
+    [Trait("case", "RB-019")]
     public void Validate_HealthRetriesAndCpus_MustBeNumbers()
     {
         var spec = new RunSpec { Image = "x", HealthRetries = "abc", Cpus = "0" };
@@ -246,6 +264,7 @@ public class RunCommandBuilderTests
     }
 
     [Theory]
+    [Trait("case", "RB-028")]
     [InlineData("wslc run -d nginx")]
     [InlineData("wslc.exe run -d nginx")]
     [InlineData(@"C:\tools\wslc.exe run -d nginx")]
@@ -259,6 +278,7 @@ public class RunCommandBuilderTests
     }
 
     [Theory]
+    [Trait("case", "RB-029")]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
@@ -272,6 +292,8 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-031")]
+    [Trait("case", "RB-033")]
     public void TryParse_KnowsPortsVolumesEnvAndPullPolicy()
     {
         Assert.True(RunCommandBuilder.TryParse(
@@ -297,6 +319,7 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-033")]
     public void TryParse_QuotedEnvValueSurvivesSpaces()
     {
         Assert.True(RunCommandBuilder.TryParse("wslc run -e \"A=b c\" nginx", out var parsed));
@@ -307,6 +330,7 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-032")]
     public void TryParse_UnknownPullPolicy_GoesToExtraArgsToKeepPreviewHonest()
     {
         Assert.True(RunCommandBuilder.TryParse("wslc run --pull if-not-present nginx", out var parsed));
@@ -317,6 +341,7 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-032")]
     public void TryParse_PassesUnknownValueFlagsIntoExtraArgsVerbatim()
     {
         Assert.True(RunCommandBuilder.TryParse(
@@ -327,6 +352,7 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-034")]
     public void TryParse_DisplayedCommand_RoundTripsToTheSameCommand()
     {
         var display = RunCommandBuilder.Display(FullSpec());
@@ -337,6 +363,7 @@ public class RunCommandBuilderTests
     }
 
     [Fact]
+    [Trait("case", "RB-003")]
     public async Task ContainersService_RunAsync_PassesBuiltArgsThroughStreamingPath()
     {
         var cli = new RoutingWslcCli();

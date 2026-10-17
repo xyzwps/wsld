@@ -6,7 +6,8 @@ using wsld.Core.WslcCli;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 011:拉取期间的实时进度上屏(伪终端屏幕行 → 汇总一句话 + 逐行文本)。
+/// 册子 PP-001–PP-016 · 「拉取只跑一遍」与「收场时进度与汇总一起退场」各节的界面侧对应:
+/// 拉取期间的实时进度上屏(伪终端屏幕行 → 汇总一句话 + 逐行文本),结果与取消的口径对 IA。
 /// 假 CLI 用 <c>ConsoleHandler</c> 制造"进程还在跑、进度一帧一帧到"的现场:
 /// 帧内容是真机抓到的屏幕行(每层一行,回写覆盖),结局由测试放行,这样才能断言"中途"的状态。
 /// </summary>
@@ -40,9 +41,11 @@ public class ImagesPagePullProgressTests
         "04bdbc7ea6b5: Pull complete",
     ];
 
-    // ---------- AC1 · 走伪终端,命令映射不变 ----------
+    // ---------- 走伪终端,命令映射不变 ----------
 
     [Fact]
+    [Trait("case", "PP-001")]
+    [Trait("case", "IA-005")]
     public async Task Pull_StartsWslcThroughThePseudoTerminal()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages };
@@ -52,15 +55,17 @@ public class ImagesPagePullProgressTests
 
         await vm.PullAsync();
 
-        Assert.Equal(1, cli.CountConsoleCalls("pull"));                  // AC1:拉取走 RunWithConsoleAsync
+        Assert.Equal(1, cli.CountConsoleCalls("pull"));                  // 拉取走 RunWithConsoleAsync
         Assert.Equal(new[] { "pull", NginxRef }, cli.LastConsoleCall("pull"));   // 参数与普通管道完全一致
         Assert.Equal(0, cli.CountCalls("pull") - cli.CountConsoleCalls("pull")); // 没有偷偷再跑一遍普通管道
         Assert.Equal("已拉取 " + NginxRef, vm.Notice);                     // 结果解析没被新路径破坏
     }
 
-    // ---------- AC2 / AC3 · 中途就有反馈 ----------
+    // ---------- 中途就有反馈 ----------
 
     [Fact]
+    [Trait("case", "PP-003")]
+    [Trait("case", "PP-007")]
     public async Task Pull_WhileItIsRunning_ShowsLinesAndSummary()
     {
         var gate = new FrameGate([FrameFsLayer, FrameDownloading], FixtureLoader.Read("wslc-pull-new.txt"));
@@ -75,7 +80,7 @@ public class ImagesPagePullProgressTests
         Assert.True(vm.IsBusy);                                       // 进程还在跑,但用户已经看得见东西了
         Assert.Contains("ecc510c1e359: Downloading 1.073MB", vm.PullProgressText);
         Assert.Contains("latest: Pulling from library/nginx", vm.PullProgressText);
-        Assert.Equal("已下载 1.1 MB · 完成 1/2 层", vm.PullSummary);       // AC2
+        Assert.Equal("已下载 1.1 MB · 完成 1/2 层", vm.PullSummary);       //
         Assert.True(vm.HasPullSummary);
 
         gate.Complete();
@@ -85,6 +90,7 @@ public class ImagesPagePullProgressTests
     }
 
     [Fact]
+    [Trait("case", "PP-003")]
     public async Task PullProgressText_HoldsOneRowPerLayer()
     {
         var gate = new FrameGate([FrameDownloading], FixtureLoader.Read("wslc-pull-new.txt"));
@@ -96,7 +102,7 @@ public class ImagesPagePullProgressTests
         var pull = vm.PullAsync();
         await WaitUntilAsync(() => vm.HasPullProgress);
 
-        // 界面文本 = 屏幕行,行数是"头行 + 层数",不是"帧数 × 层数"(AC3:一行=一层最新状态)
+        // 界面文本 = 屏幕行,行数是"头行 + 层数",不是"帧数 × 层数"(一行=一层最新状态)
         var rows = vm.PullProgressText.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(3, rows.Length);
 
@@ -105,6 +111,7 @@ public class ImagesPagePullProgressTests
     }
 
     [Fact]
+    [Trait("case", "PP-011")]
     public async Task Pull_WithoutManifestYet_HidesTheSummaryRow()
     {
         var gate = new FrameGate(
@@ -149,9 +156,10 @@ public class ImagesPagePullProgressTests
         Assert.Equal(4, raised.Count(name => name == nameof(ImagesPageViewModel.PullProgressText)));
     }
 
-    // ---------- AC4 · 结束 / 失败 / 取消都要收起 ----------
+    // ---------- 结束 / 失败 / 取消都要收起 ----------
 
     [Fact]
+    [Trait("case", "PP-015")]
     public async Task PullDone_HidesTheProgressPanel()
     {
         var gate = new FrameGate([FrameDownloading], FixtureLoader.Read("wslc-pull-new.txt"));
@@ -167,12 +175,15 @@ public class ImagesPagePullProgressTests
         gate.Complete();
         await pull;
 
-        Assert.False(vm.HasPullProgress);           // AC4:结果条 + 新列表接手,进度不再占地方
+        Assert.False(vm.HasPullProgress);           // 结果条 + 新列表接手,进度不再占地方
         Assert.Equal("", vm.PullProgressText);
         Assert.False(vm.HasPullSummary);
     }
 
     [Fact]
+    [Trait("case", "PP-015")]
+    [Trait("case", "PP-016")]
+    [Trait("case", "IA-013")]
     public async Task PullFailed_HidesTheProgressAndKeepsTheError()
     {
         var gate = new FrameGate([FrameDownloading], "");
@@ -187,13 +198,15 @@ public class ImagesPagePullProgressTests
         gate.Complete(1, FailStdErr);
         Assert.Null(await pull);
 
-        Assert.True(vm.HasError);                        // AC4:失败也只留错误条
+        Assert.True(vm.HasError);                        // 失败也只留错误条
         Assert.Contains("E_FAIL", vm.Error);
         Assert.False(vm.HasPullProgress);
         Assert.Equal(2, vm.Items.Count);                 // 列表数据不丢
     }
 
     [Fact]
+    [Trait("case", "PP-015")]
+    [Trait("case", "IA-011")]
     public async Task PullCancelled_HidesTheProgressAndReportsCancellation()
     {
         var gate = new FrameGate([FrameDownloading], "");
@@ -208,7 +221,7 @@ public class ImagesPagePullProgressTests
         vm.CancelPull();
         Assert.Null(await pull);
 
-        Assert.False(vm.HasPullProgress);                // AC6:取消后不留半截进度
+        Assert.False(vm.HasPullProgress);                // 取消后不留半截进度
         Assert.Equal("", vm.PullProgressText);
         Assert.False(vm.HasError);
         Assert.Equal("已取消拉取 " + NginxRef, vm.Notice);
@@ -217,6 +230,7 @@ public class ImagesPagePullProgressTests
     // ---------- 上一次的残留不能跟着下一次拉取跑 ----------
 
     [Fact]
+    [Trait("case", "PP-012")]
     public async Task SecondPull_ResetsTheDedupeMemoryAndShowsTheSameFrameAgain()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages };
@@ -244,6 +258,7 @@ public class ImagesPagePullProgressTests
     }
 
     [Fact]
+    [Trait("case", "PP-011")]
     public void PullProgress_IsQuietBeforeAnyOperation()
     {
         var vm = Create(new RoutingWslcCli { ListJson = TwoImages });
@@ -257,6 +272,7 @@ public class ImagesPagePullProgressTests
     // ---------- 汇总数字只许向前 ----------
 
     [Fact]
+    [Trait("case", "PP-008")]
     public async Task Pull_WhenALayerStopsReportingBytes_SummaryDoesNotGoBackwards()
     {
         // 第二帧里 ecc510c1e359 变成 Download complete:那一行不再带字节数。
@@ -289,6 +305,7 @@ public class ImagesPagePullProgressTests
     }
 
     [Fact]
+    [Trait("case", "PP-012")]
     public async Task SecondPull_CountsDownloadedBytesFromScratch()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages };

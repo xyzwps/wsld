@@ -3,7 +3,7 @@ using wsld.Core.WslcCli;
 
 namespace wsld.Tests;
 
-/// <summary>功能 004 · AC1–AC4:镜像服务的命令拼装、输入校验、结果解析与错误传播。</summary>
+/// <summary>册子 IA-001、IA-003、IA-005、IA-006、IA-007、IA-013、IA-014、IA-015:镜像动作的命令拼装、输入校验、结果解析与错误传播。</summary>
 public class ImageActionsServiceTests
 {
     private const string BusyBoxRef = "docker.1ms.run/library/busybox:latest";
@@ -28,9 +28,10 @@ public class ImageActionsServiceTests
         如果此错误是意外错误，请考虑搜索现有问题或在 https://github.com/microsoft/WSL/issues 提交新问题。
         """;
 
-    // ---------- AC1 · 拉取命令映射 ----------
+    // ---------- 拉取命令映射 ----------
 
     [Fact]
+    [Trait("case", "IA-001")]
     public async Task PullAsync_InvokesWslcPullWithTrimmedReference()
     {
         var cli = new FakeWslcCli().Enqueue(0, FixtureLoader.Read("wslc-pull-uptodate.txt"));
@@ -43,9 +44,10 @@ public class ImageActionsServiceTests
     }
 
     [Fact]
+    [Trait("case", "IA-001")]
     public async Task PullAsync_UsesDetailedOutputNotQuietFlag()
     {
-        // AC1:实测 -q 会把 Status: 行吃掉,拿不到"新下载/已最新"的区分,所以必须用详细输出。
+        // 实测 -q 会把 Status: 行吃掉,拿不到"新下载/已最新"的区分,所以必须用详细输出。
         var cli = new FakeWslcCli().Enqueue(0, FixtureLoader.Read("wslc-pull-new.txt"));
         var service = new ImagesService(cli);
 
@@ -54,9 +56,10 @@ public class ImageActionsServiceTests
         Assert.DoesNotContain("-q", cli.Calls.Single());
     }
 
-    // ---------- AC3 · 拉取结果解析 ----------
+    // ---------- 拉取结果解析 ----------
 
     [Fact]
+    [Trait("case", "IA-005")]
     public async Task PullAsync_NewlyDownloadedOutput_ReportsNotUpToDate()
     {
         var cli = new FakeWslcCli().Enqueue(0, FixtureLoader.Read("wslc-pull-new.txt"));
@@ -70,6 +73,7 @@ public class ImageActionsServiceTests
     }
 
     [Fact]
+    [Trait("case", "IA-006")]
     public async Task PullAsync_UpToDateOutput_ReportsUpToDate()
     {
         var cli = new FakeWslcCli().Enqueue(0, FixtureLoader.Read("wslc-pull-uptodate.txt"));
@@ -82,9 +86,10 @@ public class ImageActionsServiceTests
     }
 
     [Fact]
+    [Trait("case", "IA-007")]
     public async Task PullAsync_OutputWithoutStatusLine_DoesNotThrow()
     {
-        // AC3:未来输出形态变化(或改用 -q)时不能崩,按"不是最新"处理即可。
+        // 未来输出形态变化(或改用 -q)时不能崩,按"不是最新"处理即可。
         var cli = new FakeWslcCli().Enqueue(0, BusyBoxRef);
         var service = new ImagesService(cli);
 
@@ -95,6 +100,7 @@ public class ImageActionsServiceTests
     }
 
     [Fact]
+    [Trait("case", "IA-007")]
     public async Task PullAsync_EmptyOutput_DoesNotThrow()
     {
         var cli = new FakeWslcCli().Enqueue(0, "");
@@ -106,9 +112,10 @@ public class ImageActionsServiceTests
         Assert.False(result.IsUpToDate);
     }
 
-    // ---------- AC2 · 空引用绝不启动进程 ----------
+    // ---------- 空引用绝不启动进程 ----------
 
     [Theory]
+    [Trait("case", "IA-003")]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
@@ -134,9 +141,10 @@ public class ImageActionsServiceTests
         Assert.Empty(cli.Calls);
     }
 
-    // ---------- AC4 · 删除命令映射 ----------
+    // ---------- 删除命令映射 ----------
 
     [Fact]
+    [Trait("case", "IA-001")]
     public async Task RemoveAsync_DefaultsToPlainRmi()
     {
         var cli = new FakeWslcCli().Enqueue(0, "已取消标记: wslcd-test:alpha");
@@ -150,6 +158,7 @@ public class ImageActionsServiceTests
     }
 
     [Fact]
+    [Trait("case", "IA-001")]
     public async Task RemoveAsync_Force_AddsFlagBeforeReference()
     {
         var cli = new FakeWslcCli().Enqueue(0, "已删除: sha256:aaef90e06523");
@@ -162,6 +171,7 @@ public class ImageActionsServiceTests
     }
 
     [Fact]
+    [Trait("case", "IA-001")]
     public async Task RemoveAsync_TrimsReference()
     {
         var cli = new FakeWslcCli().Enqueue(0);
@@ -175,6 +185,7 @@ public class ImageActionsServiceTests
     // ---------- 错误传播 ----------
 
     [Fact]
+    [Trait("case", "IA-013")]
     public async Task PullAsync_NonZeroExit_ThrowsWithPullCommandAndErrorText()
     {
         var cli = new FakeWslcCli().Enqueue(1, "", PullFailureStdErr);
@@ -187,6 +198,7 @@ public class ImageActionsServiceTests
     }
 
     [Fact]
+    [Trait("case", "IA-014")]
     public async Task RemoveAsync_ConflictExit_ThrowsWithRmiCommandAndIsRecognisedAsConflict()
     {
         var cli = new FakeWslcCli().Enqueue(1, "", ConflictStdErr);
@@ -199,6 +211,7 @@ public class ImageActionsServiceTests
     }
 
     [Fact]
+    [Trait("case", "IA-015")]
     public async Task RemoveAsync_NotFoundExit_IsNotAConflict()
     {
         var cli = new FakeWslcCli().Enqueue(1, "", NotFoundStdErr);
@@ -230,7 +243,7 @@ public class ImageActionsServiceTests
         Assert.Equal(new[] { "rmi", "-f", BusyBoxRef }, cli.LastArguments);
     }
 
-    // ---------- 功能 010 · AC5 · 打标签(镜像源改名) ----------
+    // ---------- registry-mirror 册 · 打标签(镜像源改名) ----------
 
     private const string MirrorRef = "docker.1ms.run/library/redis:7";
     private const string PlainRef = "redis:7";
@@ -266,7 +279,7 @@ public class ImageActionsServiceTests
         var service = new ImagesService(cli);
 
         await Assert.ThrowsAsync<ArgumentException>(() => service.TagAsync("   ", PlainRef));
-        Assert.Empty(cli.Calls);   // AC2 同一条规矩:空引用绝不启动进程
+        Assert.Empty(cli.Calls);   // 同一条规矩:空引用绝不启动进程
     }
 
     [Theory]
@@ -303,9 +316,10 @@ public class ImageActionsServiceTests
         await Assert.ThrowsAnyAsync<OperationCanceledException>(() => service.TagAsync(MirrorRef, PlainRef));
         Assert.Equal(new[] { "tag", MirrorRef, PlainRef }, cli.LastArguments);
     }
-    // ---------- 功能 011 · 带实时进度的拉取 ----------
+    // ---------- pull-progress 册 · 带实时进度的拉取 ----------
 
     [Fact]
+    [Trait("case", "IA-001")]
     public async Task PullWithProgressAsync_InvokesWslcPullThroughTheConsoleWithTrimmedReference()
     {
         var cli = new FakeWslcCli().Enqueue(0, FixtureLoader.Read("wslc-pull-uptodate.txt"));
@@ -313,7 +327,7 @@ public class ImageActionsServiceTests
 
         await service.PullWithProgressAsync($"  {BusyBoxRef}  ");
 
-        // AC1:参数与旧 PullAsync 逐字一致,只是换了输出口(伪终端)
+        // 参数与旧 PullAsync 逐字一致,只是换了输出口(伪终端)
         var args = Assert.Single(cli.ConsoleCalls);
         Assert.Equal(new[] { "pull", BusyBoxRef }, args);
     }
@@ -328,7 +342,7 @@ public class ImageActionsServiceTests
 
         await service.PullWithProgressAsync(BusyBoxRef, frames.Add);
 
-        // 没有中途帧时(普通管道回退,AC5):结束时一次性交出全部屏幕行,内容就是这次拉取的输出
+        // 没有中途帧时(普通管道回退,):结束时一次性交出全部屏幕行,内容就是这次拉取的输出
         var frame = Assert.Single(frames);
         Assert.Contains("ecc510c1e359: Pull complete", frame);
         Assert.Contains("Status: Downloaded newer image for docker.1ms.run/library/nginx:latest", frame);
@@ -364,7 +378,7 @@ public class ImageActionsServiceTests
         var streamed = await new ImagesService(new FakeWslcCli().Enqueue(0, pullOut))
             .PullWithProgressAsync(BusyBoxRef, _ => progressFrames++);
 
-        // AC7:换了输出口不能换结论
+        // 换了输出口不能换结论
         Assert.Equal(plain.Reference, streamed.Reference);
         Assert.Equal(plain.IsUpToDate, streamed.IsUpToDate);
         Assert.Equal(plain.Notice, streamed.Notice);
@@ -372,6 +386,7 @@ public class ImageActionsServiceTests
     }
 
     [Theory]
+    [Trait("case", "IA-003")]
     [InlineData("")]
     [InlineData("   ")]
     [InlineData(null)]
@@ -386,6 +401,7 @@ public class ImageActionsServiceTests
     }
 
     [Fact]
+    [Trait("case", "IA-013")]
     public async Task PullWithProgressAsync_NonZeroExit_ThrowsWithPullCommandAndErrorText()
     {
         var cli = new FakeWslcCli().Enqueue(1, "", PullFailureStdErr);
@@ -407,7 +423,7 @@ public class ImageActionsServiceTests
             () => service.PullWithProgressAsync(BusyBoxRef, null, CancellationToken.None));
         Assert.Equal(new[] { "pull", BusyBoxRef }, cli.LastArguments);
     }
-    /// <summary>模拟进程已经启动、但中途被取消(AC6 里取消拉取的底层形态)。</summary>
+    /// <summary>模拟进程已经启动、但中途被取消(里取消拉取的底层形态)。</summary>
     private sealed class CancellingCli : IWslcCli
     {
         public IReadOnlyList<string>? LastArguments { get; private set; }

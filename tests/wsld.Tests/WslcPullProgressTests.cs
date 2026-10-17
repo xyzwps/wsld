@@ -3,7 +3,8 @@ using wsld.Core.Parsing;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 011 · AC2:把"屏幕上此刻可见的行"解析成汇总数字(层数 / 完成数 / 已下载字节)。
+/// 册子 PP · 「旁边那句话说的是"下了多少、完成几层"」一节的可执行对应(PP-003–PP-004、PP-007–PP-011、PP-013、PP-016):
+/// 把"屏幕上此刻可见的行"解析成汇总数字(层数 / 完成数 / 已下载字节)。
 /// 行形态取自真机 wslc 3.0.1 的伪终端输出:字节数写作 <c>544.5kB</c> / <c>1.073MB</c> / <c>2.14MB</c>
 /// (1000 进制、小数位会变),解压阶段写作 <c>Extracting 5.5MB/27MB</c>,
 /// 终态只有 <c>Pull complete</c> 与 <c>Already exists</c> 两种 —— <c>Download complete</c> 只是下载完了,层还没解压完。
@@ -13,6 +14,10 @@ public class WslcPullProgressTests
     // ---------- 计数 ----------
 
     [Fact]
+    [Trait("case", "PP-003")]
+    [Trait("case", "PP-004")]
+    [Trait("case", "PP-009")]
+    [Trait("case", "PP-010")]
     public void Parse_CountsLayersDoneAndBytes()
     {
         var snapshot = WslcPullProgress.Parse(
@@ -27,10 +32,11 @@ public class WslcPullProgressTests
         Assert.Equal(4, snapshot.TotalLayers);   // 头行不算层
         Assert.Equal(1, snapshot.DoneLayers);
         Assert.Equal(1_073_000L + 27_000_000L, snapshot.DownloadedBytes);
-        Assert.Equal(5, snapshot.Lines.Count);   // 原始行要原样带着,界面靠它逐行显示(AC3)
+        Assert.Equal(5, snapshot.Lines.Count);   // 原始行要原样带着,界面靠它逐行显示
     }
 
     [Fact]
+    [Trait("case", "PP-011")]
     public void Parse_EmptyScreen_IsEmpty()
     {
         var snapshot = WslcPullProgress.Parse(Array.Empty<string>());
@@ -42,6 +48,7 @@ public class WslcPullProgressTests
     }
 
     [Fact]
+    [Trait("case", "PP-004")]
     public void Parse_HeaderDigestStatusAndReferenceLinesAreNotLayers()
     {
         var snapshot = WslcPullProgress.Parse(
@@ -59,6 +66,8 @@ public class WslcPullProgressTests
     // ---------- 一层的最终状态 = 最后出现的那一行 ----------
 
     [Fact]
+    [Trait("case", "PP-003")]
+    [Trait("case", "PP-009")]
     public void Parse_LatestLineWinsForOneLayer()
     {
         var snapshot = WslcPullProgress.Parse(
@@ -75,6 +84,7 @@ public class WslcPullProgressTests
     }
 
     [Fact]
+    [Trait("case", "PP-003")]
     public void Parse_LayerIdIsCaseInsensitive()
     {
         var snapshot = WslcPullProgress.Parse(
@@ -90,6 +100,7 @@ public class WslcPullProgressTests
     // ---------- 终态判定要保守 ----------
 
     [Theory]
+    [Trait("case", "PP-009")]
     [InlineData("Pull complete", true)]
     [InlineData("Already exists", true)]
     [InlineData("Download complete", false)]   // 只是下载完,还在解压
@@ -108,6 +119,7 @@ public class WslcPullProgressTests
     // ---------- 字节数 ----------
 
     [Fact]
+    [Trait("case", "PP-008")]
     public void Parse_KeepsTheLargestByteCountPerLayer()
     {
         var snapshot = WslcPullProgress.Parse(
@@ -125,6 +137,7 @@ public class WslcPullProgressTests
     // ---------- 跨帧台账:真机上"已下载"会倒退 ----------
 
     [Fact]
+    [Trait("case", "PP-008")]
     public void Parse_WithLedger_DownloadedNeverGoesBackwardsAcrossFrames()
     {
         // 实测现场:某层进入 Download complete 之后,屏幕上那一行不再带字节数。
@@ -172,6 +185,7 @@ public class WslcPullProgressTests
     }
 
     [Fact]
+    [Trait("case", "PP-010")]
     public void Parse_ExtractingFraction_TakesTheDenominator()
     {
         var snapshot = WslcPullProgress.Parse(["a60ef8ec184e: Extracting 5.5MB/27MB"]);
@@ -180,6 +194,7 @@ public class WslcPullProgressTests
     }
 
     [Theory]
+    [Trait("case", "PP-010")]
     [InlineData("a60ef8ec184e: Downloading 544.5kB", 544_500)]
     [InlineData("a60ef8ec184e: Downloading 1.073MB", 1_073_000)]
     [InlineData("a60ef8ec184e: Downloading 2.14GB", 2_140_000_000)]
@@ -206,6 +221,9 @@ public class WslcPullProgressTests
     // ---------- 真机整段输出 ----------
 
     [Fact]
+    [Trait("case", "PP-007")]
+    [Trait("case", "PP-009")]
+    [Trait("case", "PP-013")]
     public void Parse_RealPullLog_AllSevenLayersDone()
     {
         var lines = WslcLogText
@@ -220,6 +238,7 @@ public class WslcPullProgressTests
     }
 
     [Fact]
+    [Trait("case", "PP-011")]
     public void Parse_UpToDateLog_HasNoLayers()
     {
         var lines = WslcLogText
@@ -231,6 +250,8 @@ public class WslcPullProgressTests
     // ---------- 界面用它区分"进度"和"报错" ----------
 
     [Theory]
+    [Trait("case", "PP-004")]
+    [Trait("case", "PP-016")]
     [InlineData("a60ef8ec184e: Downloading 544.5kB", true)]
     [InlineData("a60ef8ec184e: Pull complete", true)]
     [InlineData("0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef: Pulling fs layer", true)]
@@ -247,6 +268,7 @@ public class WslcPullProgressTests
     // ---------- 给人看的字节数 ----------
 
     [Theory]
+    [Trait("case", "PP-010")]
     [InlineData(0, "0 B")]
     [InlineData(812, "812 B")]
     [InlineData(1_000, "1 kB")]

@@ -5,12 +5,14 @@ using wsld.Core.WslcCli;
 
 namespace wsld.Tests;
 
-/// <summary>容器详情面板:操作收尾(状态清零与对外事件)必须回到 UI 线程。</summary>
+/// <summary>册子 CA-009、CA-011、CA-015–CA-017:详情头部四颗操作键的可用性与操作收尾。</summary>
 public class ContainerDetailViewModelTests
 {
     private const string ExitedJson = """{"ID":"aaaa11112222","Names":"web","Image":"nginx:latest","State":"exited","Status":"Exited (137)","Command":"nginx","Networks":"bridge"}""";
 
     [Fact]
+    [Trait("case", "CA-009")]
+    [Trait("case", "CA-011")]
     public async Task BusyIsClearedOnTheUiThreadAndEventsFireOnTheUiThread()
     {
         var cli = new GateCli();
@@ -41,9 +43,12 @@ public class ContainerDetailViewModelTests
         Assert.False(detail.IsBusy);
     }
 
-    // ---------- AC9:四个操作键的可用性(行内只留启动,其余都在详情里) ----------
+    // ---------- 四个操作键的可用性(行内只留启动,其余都在详情里) ----------
 
     [Theory]
+    [Trait("case", "CA-015")]
+    [Trait("case", "CA-016")]
+    [Trait("case", "CA-017")]
     [InlineData("running", false, true, true, true)]
     [InlineData("exited", true, false, true, true)]
     public void ButtonAvailability_RunsOnState(string state, bool canStart, bool canStop, bool canRestart, bool canRemove)

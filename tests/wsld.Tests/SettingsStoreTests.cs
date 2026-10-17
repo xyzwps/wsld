@@ -4,7 +4,8 @@ using wsld.Core.Settings;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 009 · AC2:设置文件的读写。
+/// 册子 SET-004–SET-008、SET-012–SET-016(并及 TH-011、TH-012、LANG-004):
+/// 设置文件的读写与容错。
 /// 全部走临时目录里的具体路径(而不是默认的 %LOCALAPPDATA% 位置),
 /// 测试机器上真实的用户设置不能被单测改掉。
 /// </summary>
@@ -30,6 +31,8 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "TH-011")]
+    [Trait("case", "LANG-004")]
     public void RoundTrip_KeepsThemeAndLanguage()
     {
         var saved = SettingsStore.SaveTo(new AppSettings { Theme = ThemeMode.Light, Language = AppLanguage.En }, SettingsPath);
@@ -41,6 +44,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-017")]
     public void RoundTrip_CreatesMissingDirectory()
     {
         var nested = Path.Combine(_dir, "a", "b", "settings.json");
@@ -50,6 +54,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-004")]
     public void MissingFile_FallsBackToDefaults()
     {
         var loaded = SettingsStore.LoadFrom(Path.Combine(_dir, "nope.json"));
@@ -59,6 +64,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-005")]
     public void CorruptFile_FallsBackToDefaults()
     {
         Directory.CreateDirectory(_dir);
@@ -68,6 +74,8 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-013")]
+    [Trait("case", "TH-012")]
     public void SavedFile_UsesReadableEnumNames()
     {
         SettingsStore.SaveTo(new AppSettings { Theme = ThemeMode.Dark, Language = AppLanguage.ZhCn }, SettingsPath);
@@ -78,6 +86,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-006")]
     public void HandWrittenJson_IsTolerated()
     {
         Directory.CreateDirectory(_dir);
@@ -95,6 +104,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-006")]
     public void Utf8BomPrefixedFile_IsStillRead()
     {
         // 记事本 / Visual Studio 常把文件存成"带 BOM 的 UTF-8",开头多出 EF BB BF。
@@ -108,6 +118,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-008")]
     public void UnknownFutureField_IsIgnored()
     {
         Directory.CreateDirectory(_dir);
@@ -117,6 +128,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-007")]
     public void WritingToAnImpossibleSettingsPathReportsFailureInsteadOfThrowing()
     {
         var bogus = Path.Combine(_dir, "..", "\0invalid", "settings.json");
@@ -125,6 +137,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-012")]
     public void DefaultLocation_LivesUnderLocalAppData()
     {
         var expectedRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -135,9 +148,12 @@ public sealed class SettingsStoreTests : IDisposable
         Assert.StartsWith(string.IsNullOrEmpty(expectedRoot) ? Path.GetTempPath() : expectedRoot, SettingsStore.FilePath);
     }
 
-    // ---------- 功能 010 · AC1/AC7 · 镜像源字段 ----------
+    // ---------- 册子 SET-014–SET-016 · 镜像源字段 ----------
 
     [Fact]
+    [Trait("case", "SET-018")]
+    [Trait("case", "SET-016")]
+    [Trait("case", "RM-005")]
     public void RoundTrip_KeepsRegistryMirrorAndRenameOption()
     {
         var saved = SettingsStore.SaveTo(
@@ -150,6 +166,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-014")]
     public void OldFile_WithoutMirrorFields_KeepsWorkingWithDefaults()
     {
         // 009 时代存的文件只有 Theme / Language,新增字段必须有默认值(开发笔记 #9)。
@@ -162,6 +179,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-015")]
     public void NullMirrorInFile_DoesNotBecomeNull()
     {
         Directory.CreateDirectory(_dir);
@@ -171,6 +189,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-015")]
     public void AssigningNullMirror_FallsBackToEmptyString()
     {
         var settings = new AppSettings { RegistryMirror = "docker.1ms.run" };
@@ -180,6 +199,7 @@ public sealed class SettingsStoreTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "SET-016")]
     public void SavedFile_NamesTheMirrorFieldsReadable()
     {
         SettingsStore.SaveTo(new AppSettings { RegistryMirror = "localhost:5000/mirror" }, SettingsPath);

@@ -15,6 +15,71 @@
          根 Grid 只有一行(隐式 "*"),两栏都靠它拿到窗口高度:
          这里多写一行 RowDefinitions="Auto,..." 会把两栏塞进 Auto 行,
          它们便以"无限高"去测量,列表和详情各自的内容撑满后内部滚动条永远不出现。 -->
+    <!-- 详情区两个页签的样式:不要单选钮那个圆点,选中只在文字下面画一条强调线。
+         这里刻意不用 TabView —— 它自带一个"新建标签"的 + 按钮,而 Windows App SDK 2.5 上
+         没有暴露关掉它的属性(XamlCompiler 直接报 Unknown member 'IsAddButtonVisible')。 -->
+    <Page.Resources>
+        <Style x:Key="TabRadioStyle" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Padding" Value="12,6,12,8" />
+            <Setter Property="MinWidth" Value="72" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid>
+                            <VisualStateManager.VisualStateGroups>
+                                <VisualStateGroup x:Name="CommonStates">
+                                    <!-- 必须成对写:只在 Checked 态里把下划线拉出来,取消勾选时没人把它收回去,
+                                         结果两个页签会同时带线(真机截图上看到的)。 -->
+                                    <VisualState x:Name="Normal">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Underline"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="0" />
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="HeaderText"
+                                                                           Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame Value="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Unchecked">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Underline"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="0" Duration="0" />
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="HeaderText"
+                                                                           Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame Value="{ThemeResource TextFillColorSecondaryBrush}" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                    <VisualState x:Name="Checked">
+                                        <Storyboard>
+                                            <DoubleAnimation Storyboard.TargetName="Underline"
+                                                             Storyboard.TargetProperty="Opacity"
+                                                             To="1" Duration="0:0:0.08" />
+                                            <ObjectAnimationUsingKeyFrames Storyboard.TargetName="HeaderText"
+                                                                           Storyboard.TargetProperty="Foreground">
+                                                <DiscreteObjectKeyFrame Value="{ThemeResource TextFillColorPrimaryBrush}" />
+                                            </ObjectAnimationUsingKeyFrames>
+                                        </Storyboard>
+                                    </VisualState>
+                                </VisualStateGroup>
+                            </VisualStateManager.VisualStateGroups>
+                            <ContentPresenter x:Name="HeaderText" Padding="{TemplateBinding Padding}"
+                                              Content="{TemplateBinding Content}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                            <Border x:Name="Underline" Height="2" Width="28" CornerRadius="1"
+                                    VerticalAlignment="Bottom" Opacity="0"
+                                    Background="{ThemeResource AccentFillColorDefaultBrush}" />
+                        </Grid>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Page.Resources>
+
     <Grid ColumnDefinitions="Auto,Auto,*">
 
         <!-- ===== 左栏:容器列表(固定宽度,不随窗口拉伸) ===== -->
@@ -155,8 +220,8 @@
         <Border Grid.Column="1" Width="1" Margin="0,12"
                 Background="{ThemeResource DividerStrokeColorDefaultBrush}" />
 
-        <!-- ===== 右栏:容器详情 ===== -->
-        <Grid Grid.Column="2" RowDefinitions="Auto,Auto,*">
+        <!-- ===== 右栏:容器详情(两个页签:详情 / 日志) ===== -->
+        <Grid Grid.Column="2" RowDefinitions="Auto,Auto,Auto,*">
             <!-- 详情头部 -->
             <Grid Grid.Row="0" Padding="12,12,12,4" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"
                   Visibility="{x:Bind HasDetail, Mode=OneWay, Converter={StaticResource BoolToVis}}">
@@ -220,6 +285,21 @@
                      Message="{x:Bind DetailError, Mode=OneWay}"
                      Visibility="{x:Bind HasDetail, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
 
+            <!-- 页签条:只做选择,内容放在下面同一行的两块里按可见性切换。
+                 不把面板塞进页签的 Content —— 那样每次切都要重建,
+                 日志的滚动位置和已显示的行都得跟着丢。 -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="4" Margin="12,0,0,0"
+                        Visibility="{x:Bind HasDetail, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                <RadioButton x:Name="DetailTabRadio" GroupName="detailTab" IsChecked="True"
+                             Style="{StaticResource TabRadioStyle}"
+                             Checked="DetailTab_Checked"
+                             Content="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.tab.detail}" />
+                <RadioButton x:Name="LogsTabRadio" GroupName="detailTab"
+                             Style="{StaticResource TabRadioStyle}"
+                             Checked="DetailTab_Checked"
+                             Content="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.tab.logs}" />
+            </StackPanel>
+
             <!-- 详情内容:卡片宽度 = min(视口, 600 DIP),左右留白平分。
                  这里必须把面板宽度显式绑到 ScrollViewer 的实际宽度(用经典 Binding ElementName;
                  x:Bind 在解析顺序上拿不到还没建好的外层元素,绑出来是 0,整叠卡片直接不见):
@@ -228,10 +308,10 @@
                  而且比视口窄时会被摆到右边去 —— 看着就是"有时不居中"。
                  横向滚动也照样关掉:开着时一条长标签就能把可滚动范围撑得比视口宽。
                  左右留白放在面板自己的 Padding 上,这样"视口宽"就是可用的全部内容宽。 -->
-            <ScrollViewer x:Name="DetailScroller" Grid.Row="2" VerticalScrollBarVisibility="Auto"
+            <ScrollViewer x:Name="DetailScroller" Grid.Row="3" VerticalScrollBarVisibility="Auto"
                           HorizontalScrollMode="Disabled" HorizontalScrollBarVisibility="Disabled"
                           Padding="0,4,0,12"
-                          Visibility="{x:Bind HasDetail, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                          Visibility="{x:Bind DetailContentVisible, Mode=OneWay, Converter={StaticResource BoolToVis}}">
                 <StackPanel Spacing="12" Padding="12,0,12,0" MaxWidth="624" HorizontalAlignment="Center"
                             Width="{Binding ActualWidth, ElementName=DetailScroller}">
 
@@ -352,8 +432,65 @@
                 </StackPanel>
             </ScrollViewer>
 
+            <!-- ===== 日志页签的内容(功能 005) =====
+                 两种读法各一个入口:「查看日志」一次性读当前能看到的;「实时日志」从点下去这一刻起
+                 只收新行、不倒历史。已经显示的行停在实时时保留,换容器才清空。 -->
+            <Grid Grid.Row="3" RowDefinitions="Auto,Auto,*,Auto" RowSpacing="8"
+                  Padding="12,4,12,12"
+                  Visibility="{x:Bind LogsContentVisible, Mode=OneWay, Converter={StaticResource BoolToVis}}">
+                <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                    <Button Style="{StaticResource GhostButtonStyle}"
+                            Content="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.read}"
+                            ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.read-tooltip}"
+                            Command="{x:Bind LogsViewModel.ReadCommand}" />
+                    <Button Style="{StaticResource AccentButtonStyle}"
+                            Content="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.live}"
+                            ToolTipService.ToolTip="{x:Bind LogsViewModel.FollowTooltip, Mode=OneWay}"
+                            Command="{x:Bind LogsViewModel.FollowCommand}" />
+                    <Button Style="{StaticResource GhostButtonStyle}"
+                            Content="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.live.stop}"
+                            ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.live.stop-tooltip}"
+                            Command="{x:Bind LogsViewModel.StopFollowCommand}" />
+                    <ProgressRing Width="16" Height="16" VerticalAlignment="Center"
+                                  IsActive="{x:Bind LogsViewModel.IsBusy, Mode=OneWay}"
+                                  Visibility="{x:Bind LogsViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="20">
+                    <!-- 行数只在「查看日志」这条路上起作用,实时日志不看它(参数拼装里就不发 -n)。
+                         SelectedItem 用代码回填:x:Bind TwoWay 在 ComboBox 上会赶上 ItemsSource 赋值那一次通知。 -->
+                    <ComboBox x:Name="TailBox" Width="150" VerticalAlignment="Bottom"
+                              Header="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.lines-header}"
+                              IsEnabled="{x:Bind LogsViewModel.CanChangeOptions, Mode=OneWay}"
+                              ItemsSource="{x:Bind LogsViewModel.TailOptions, Mode=OneTime}"
+                              DisplayMemberPath="Label"
+                              SelectionChanged="Tail_SelectionChanged" />
+                    <CheckBox VerticalAlignment="Center"
+                              Content="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.timestamps}"
+                              IsEnabled="{x:Bind LogsViewModel.CanChangeOptions, Mode=OneWay}"
+                              IsChecked="{x:Bind LogsViewModel.Timestamps, Mode=TwoWay}" />
+                    <CheckBox VerticalAlignment="Center"
+                              Content="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.auto-scroll}"
+                              IsChecked="{x:Bind LogsViewModel.AutoScroll, Mode=TwoWay}" />
+                </StackPanel>
+
+                <TextBox Grid.Row="2" x:Name="LogBox" Style="{StaticResource CodeBoxStyle}"
+                         AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=container-detail.tab.logs}"
+                         Text="{x:Bind LogsViewModel.LogText, Mode=OneWay}" />
+
+                <Grid Grid.Row="3" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <TextBlock Grid.Column="0" Style="{StaticResource HintStyle}"
+                               Text="{x:Bind LogsViewModel.Notice, Mode=OneWay}"
+                               TextWrapping="Wrap" />
+                    <TextBlock Grid.Column="1"
+                               Style="{ThemeResource CaptionTextBlockStyle}"
+                               Foreground="{ThemeResource TextFillColorTertiaryBrush}"
+                               Text="{x:Bind LogsViewModel.StatusText, Mode=OneWay}" />
+                </Grid>
+            </Grid>
+
             <!-- 空状态提示 -->
-            <StackPanel Grid.Row="2" HorizontalAlignment="Center" VerticalAlignment="Center"
+            <StackPanel Grid.Row="3" HorizontalAlignment="Center" VerticalAlignment="Center"
                         Visibility="{x:Bind HasDetail, Mode=OneWay, Converter={StaticResource BoolToVis}, ConverterParameter=invert}">
                 <FontIcon Style="{StaticResource EmptyStateIconStyle}" Glyph="&#xE9D9;" />
                 <TextBlock Style="{StaticResource EmptyStateTextStyle}"

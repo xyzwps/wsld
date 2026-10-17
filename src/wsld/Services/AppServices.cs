@@ -13,6 +13,7 @@ public static class AppServices
 
     public static ContainersService Containers { get; } = new(WslcCli);
     public static ImagesService Images { get; } = new(WslcCli);
+    public static LogsService Logs { get; } = new(WslcCli);
 
     /// <summary>就地执行历史(功能 012 补强):全局一份,切语言重建命令编排页时历史不丢。</summary>
     public static RunHistory RunHistory { get; } = new();

@@ -4,13 +4,15 @@ using wsld.Core.I18n;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 009 · AC5:文案表与语言切换的行为。
+/// 册子 LANG-001、LANG-002、LANG-003、LANG-009–LANG-011:两套词条的一致性、
+/// 三档语言的解析与切换行为。
 /// 这里一律用独立的 Localizer 实例,不动 Localizer.Default ——
 /// 别的测试类的断言写的是中文原句,并行跑的时候不能有人把全局语言改走。
 /// </summary>
 public class LocalizerTests
 {
     [Fact]
+    [Trait("case", "LANG-009")]
     public void ZhAndEnTables_HaveExactlyTheSameKeys()
     {
         var zh = StringTables.ZhCn.Keys.OrderBy(k => k, StringComparer.Ordinal).ToList();
@@ -21,6 +23,7 @@ public class LocalizerTests
     }
 
     [Theory]
+    [Trait("case", "LANG-009")]
     [InlineData("zh")]
     [InlineData("en")]
     public void Tables_HaveNoEmptyValues(string which)
@@ -30,6 +33,7 @@ public class LocalizerTests
     }
 
     [Fact]
+    [Trait("case", "LANG-011")]
     public void ZhAndEnTables_UseTheSamePlaceholders()
     {
         foreach (var (key, zhText) in StringTables.ZhCn)
@@ -40,6 +44,7 @@ public class LocalizerTests
     }
 
     [Fact]
+    [Trait("case", "LANG-011")]
     public void Tables_OnlyUseNumberedPlaceholders()
     {
         // 花括号里写了非数字的东西,string.Format 当场抛异常,这里提前拦住。
@@ -55,6 +60,8 @@ public class LocalizerTests
     }
 
     [Fact]
+    [Trait("case", "LANG-002")]
+    [Trait("case", "LANG-011")]
     public void ExplicitEnglish_ReturnsEnglishStrings()
     {
         var loc = new Localizer { Language = AppLanguage.En };
@@ -66,6 +73,8 @@ public class LocalizerTests
     }
 
     [Fact]
+    [Trait("case", "LANG-002")]
+    [Trait("case", "LANG-011")]
     public void ExplicitChinese_ReturnsChineseStrings()
     {
         var loc = new Localizer { Language = AppLanguage.ZhCn };
@@ -77,6 +86,7 @@ public class LocalizerTests
     }
 
     [Fact]
+    [Trait("case", "LANG-003")]
     public void FollowSystem_ResolvesToChineseOnlyWhenSystemIsChinese()
     {
         var loc = new Localizer { Language = AppLanguage.FollowSystem };
@@ -88,6 +98,7 @@ public class LocalizerTests
     }
 
     [Fact]
+    [Trait("case", "LANG-001")]
     public void LanguageDisplayName_MatchesTheResolvedLanguage()
     {
         Assert.Equal("简体中文", new Localizer { Language = AppLanguage.ZhCn }.LanguageDisplayName);
@@ -95,6 +106,7 @@ public class LocalizerTests
     }
 
     [Fact]
+    [Trait("case", "LANG-010")]
     public void MissingKey_ReturnsTheKeyItself()
     {
         var loc = new Localizer { Language = AppLanguage.En };
@@ -104,6 +116,7 @@ public class LocalizerTests
     }
 
     [Fact]
+    [Trait("case", "LANG-002")]
     public void ChangingLanguage_RaisesEventAndBumpsVersion()
     {
         var loc = new Localizer { Language = AppLanguage.ZhCn };

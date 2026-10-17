@@ -2,10 +2,11 @@ using wsld.Core.WslcCli;
 
 namespace wsld.Tests;
 
-/// <summary>功能 001 · AC8:wslc.exe 定位顺序。</summary>
+/// <summary>册子 CL-021、CL-022:wslc.exe 的定位顺序与找不到时的提示。</summary>
 public class WslcLocatorTests : IDisposable
 {
     [Fact]
+    [Trait("case", "CL-022")]
     public void Find_EnvironmentVariableOverride_WinsWhenExists()
     {
         var temp = Path.GetTempFileName();
@@ -22,6 +23,7 @@ public class WslcLocatorTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "CL-023")]
     public void Find_EnvironmentVariableOverride_InvalidPath_ReturnsNull()
     {
         try
@@ -36,6 +38,7 @@ public class WslcLocatorTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "CL-022")]
     public void Find_OnThisMachine_ResolvesInstalledWslc()
     {
         // 本机已安装 WSL 3 时,应能定位到 Program Files\WSL\wslc.exe。
@@ -46,6 +49,7 @@ public class WslcLocatorTests : IDisposable
     }
 
     [Fact]
+    [Trait("case", "CL-021")]
     public void NotFoundMessage_MentionsEnvVariable()
     {
         Assert.Contains(WslcLocator.EnvironmentVariable, WslcLocator.NotFoundMessage());

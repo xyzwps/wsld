@@ -3,10 +3,11 @@ using wsld.Core.WslcCli;
 
 namespace wsld.Tests;
 
-/// <summary>功能 003 · AC1:镜像服务的命令拼装与错误传播。</summary>
+/// <summary>册子 IM-001、IM-009、IM-012:镜像服务读取路径 —— 把 `wslc images` 的结果交回镜像册。</summary>
 public class ImagesServiceTests
 {
     [Fact]
+    [Trait("case", "IM-021")]
     public async Task ListAsync_InvokesWslcWithMachineReadableArgs()
     {
         var cli = new FakeWslcCli().Enqueue(0, "[]");
@@ -19,6 +20,7 @@ public class ImagesServiceTests
     }
 
     [Fact]
+    [Trait("case", "IM-009")]
     public async Task ListAsync_EmptyOutput_ReturnsEmptyList()
     {
         var cli = new FakeWslcCli().Enqueue(0, "");
@@ -28,6 +30,8 @@ public class ImagesServiceTests
     }
 
     [Fact]
+    [Trait("case", "IM-001")]
+    [Trait("case", "IM-002")]
     public async Task ListAsync_ReturnsParsedImages()
     {
         var cli = new FakeWslcCli().Enqueue(0, FixtureLoader.Read("wslc-images.ndjson"));
@@ -40,6 +44,7 @@ public class ImagesServiceTests
     }
 
     [Fact]
+    [Trait("case", "IM-012")]
     public async Task ListAsync_NonZeroExit_ThrowsWithStderrMessage()
     {
         var cli = new FakeWslcCli().Enqueue(1, "", "错误代码： E_FAIL");

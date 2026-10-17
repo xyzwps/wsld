@@ -4,7 +4,7 @@ using wsld.Core.WslcCli;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 003 / 004 的真实 CLI 冒烟。
+/// 册子 IM/IA/PP 的真实 CLI 冒烟(IM-002、IM-005–IM-006、IA-002、IA-006、IA-014、PP-001)。
 /// 默认跳过,设置了 WSLD_INTEGRATION=1 才运行。
 /// 这些用例都挑"不会破坏本机"的入口:重复拉取已存在的镜像、删除正被引用的镜像(引擎会拒绝)、
 /// 以及删除一个临时标签(只取消标签,不动镜像数据)。
@@ -23,6 +23,8 @@ public class RealWslcImagesIntegrationTests
     }
 
     [Fact]
+    [Trait("case", "IM-002")]
+    [Trait("case", "IM-005")]
     public async Task ListAsync_OnRealWslc_ReturnsParsedImages()
     {
         var cli = CliOrNull();
@@ -34,12 +36,13 @@ public class RealWslcImagesIntegrationTests
         Assert.All(images, image =>
         {
             Assert.NotEmpty(image.Id);
-            Assert.NotEmpty(image.Reference);      // AC5:有标签用 仓库:标签,没标签退化成 ID
+            Assert.NotEmpty(image.Reference);      // 有标签用 仓库:标签,没标签退化成 ID
             Assert.DoesNotContain("<none>:<none>", image.Reference);
         });
     }
 
     [Fact]
+    [Trait("case", "IA-006")]
     public async Task PullAsync_OnExistingImage_ReportsUpToDate()
     {
         var cli = CliOrNull();
@@ -50,13 +53,14 @@ public class RealWslcImagesIntegrationTests
 
         var result = await service.PullAsync(target);
 
-        // AC3:实测重复拉取会输出 `Status: Image is up to date for X`,据此区分"新下载"和"已是最新"。
+        // 实测重复拉取会输出 `Status: Image is up to date for X`,据此区分"新下载"和"已是最新"。
         Assert.Equal(target, result.Reference);
         Assert.True(result.IsUpToDate, $"真实输出未标记为最新:{result.StatusLine}");
         Assert.Contains("已是最新", result.Notice);
     }
 
     [Fact]
+    [Trait("case", "IA-014")]
     public async Task RemoveAsync_OnInUseImage_IsRejectedAsConflict()
     {
         var cli = CliOrNull();
@@ -69,7 +73,7 @@ public class RealWslcImagesIntegrationTests
         var failure = await Assert.ThrowsAsync<WslcCliException>(
             () => service.RemoveAsync(inUse.Reference));
 
-        // AC10:只有这类"正在使用"的失败才会升级成"强制删除"。
+        // 只有这类"正在使用"的失败才会升级成"强制删除"。
         Assert.True(ImageRemovalConflict.IsConflict(failure), failure.Message);
         Assert.Equal("wslc rmi", failure.Command);
 
@@ -80,11 +84,14 @@ public class RealWslcImagesIntegrationTests
     }
 
     /// <summary>
-    /// 功能 011 · AC1/AC5:伪终端路径的真实冒烟。挑"重复拉取已存在的镜像"这条无损快路径(~2 秒,只有 manifest 检查)。
+    /// 册子 PP-001(进度是靠读那一条 wslc pull 的输出读出来的)的真实冒烟:挑"重复拉取已存在的镜像"
+    /// 这条无损快路径(~2 秒,只有 manifest 检查),收尾按 IA-006 判"已是最新"。
     /// 它同时是 ConPtySession 的回归哨兵:实测 stdin 写端提前关闭会让 ConPTY 向子进程广播 Ctrl+C,
     /// wslc 一帧不画就带着 0xC000013A 退场 —— 那条路径任何单测都盖不到(单测走假 CLI),只能真机验。
     /// </summary>
     [Fact]
+    [Trait("case", "PP-001")]
+    [Trait("case", "IA-006")]
     public async Task PullWithProgressAsync_OnRealWslc_StreamsScreenThroughThePseudoTerminal()
     {
         var cli = CliOrNull();
@@ -104,11 +111,13 @@ public class RealWslcImagesIntegrationTests
         // 退出码非 0 会在 PullWithProgressAsync 里抛异常,能走到这里说明伪终端路径"活着跑完了"。
         Assert.True(frames >= 1, "伪终端一帧都没有回调 —— 子进程可能启动即被杀(见 ConPtySession 的输入写端注释)");
         Assert.NotNull(lastScreen);
-        Assert.Contains("Status:", lastScreen);               // 收尾三行必须在最终屏幕里(AC4 的解析源)
+        Assert.Contains("Status:", lastScreen);               // 收尾三行必须在最终屏幕里(它是结果解析的输入)
         Assert.True(result.IsUpToDate, result.StatusLine);    // 已存在的镜像应判为"已是最新"(与 PullAsync 同一套解析)
     }
 
     [Fact]
+    [Trait("case", "IM-006")]
+    [Trait("case", "IA-002")]
     public async Task RemoveAsync_OnTempTag_DeletesOnlyTheTag()
 
     {
@@ -126,7 +135,7 @@ public class RealWslcImagesIntegrationTests
         {
             Assert.Contains(TempReference, (await service.ListAsync()).Select(i => i.Reference));
 
-            await service.RemoveAsync(TempReference); // AC4:不带 -f 也能删,因为没有容器引用这个标签
+            await service.RemoveAsync(TempReference); // 不带 -f 也能删,因为没有容器引用这个标签
 
             Assert.DoesNotContain(TempReference, (await service.ListAsync()).Select(i => i.Reference));
         }

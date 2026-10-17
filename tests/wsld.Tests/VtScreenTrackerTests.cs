@@ -3,10 +3,12 @@ using wsld.Core.Parsing;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 011 · AC3:把 wslc 在伪终端里写出的 ANSI/VT 字节流还原成"屏幕上此刻可见的行"。
+/// 册子 PP-003 的还原层(内部零件/闸):把 wslc 在伪终端里写出的 ANSI/VT 字节流还原成"屏幕上此刻可见的行"。
 /// 下面的帧序列取自真机(wslc 3.0.1 拉 ubuntu 24.04)抓到的原样转义,不凭印象编:
 /// 每一帧都是"ESC[行;列H 定位 → 写一行 → ESC[NNX 擦掉行尾 → CR LF 前进",
 /// 所以同一层的刷新是回写同一行,屏幕行数只随层数增长,不会随刷新次数无限变长。
+/// CR/LF、擦除、OSC 跳过、分块重组这类用例守的是零件自身的正确性,不对号挂册子编号;
+/// 只有直接锁"一行一个分层"形状的两条挂了 PP-003。
 /// </summary>
 public class VtScreenTrackerTests
 {
@@ -47,6 +49,7 @@ public class VtScreenTrackerTests
     // ---------- 回写:进度刷新不增长行 ----------
 
     [Fact]
+    [Trait("case", "PP-003")]
     public void AbsoluteRewrite_KeepsOneRowPerLayer()
     {
         var tracker = new VtScreenTracker();
@@ -67,6 +70,7 @@ public class VtScreenTrackerTests
     }
 
     [Fact]
+    [Trait("case", "PP-003")]
     public void MultipleLayers_CoexistAsSeparateRows()
     {
         var tracker = new VtScreenTracker();

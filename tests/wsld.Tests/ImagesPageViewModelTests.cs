@@ -5,7 +5,7 @@ using wsld.Core.WslcCli;
 
 namespace wsld.Tests;
 
-/// <summary>功能 003 · AC7/AC8/AC9/AC10/AC12:镜像列表页 ViewModel 行为。</summary>
+/// <summary>册子 IM-001、IM-012、IM-013、IM-016、IM-017、IM-018、IM-019:镜像列表页 ViewModel 行为。</summary>
 public class ImagesPageViewModelTests
 {
     private const string BusyBox = """{"ID":"aaef90e06523","Repository":"docker.1ms.run/library/busybox","Tag":"latest","Size":"4.45MB","Containers":"2","CreatedAt":"2026-05-13 10:21:49 +0800 GMT+8","Digest":"<none>"}""";
@@ -21,9 +21,10 @@ public class ImagesPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "IM-001")]
     public void Constructor_TriggersFirstRefresh()
     {
-        // AC7:构造即加载;FakeWslcCli 同步完成,构造返回时首轮刷新已经结束。
+        // 构造即加载;FakeWslcCli 同步完成,构造返回时首轮刷新已经结束。
         var (vm, cli) = Create(ThreeImages);
 
         Assert.Single(cli.Calls);
@@ -33,6 +34,7 @@ public class ImagesPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "IM-017")]
     public void Summary_CountsFromFullList()
     {
         var (vm, _) = Create(ThreeImages);
@@ -40,6 +42,8 @@ public class ImagesPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "IM-009")]
+    [Trait("case", "IM-018")]
     public void Summary_WhenNoImages()
     {
         var (vm, _) = Create("");
@@ -48,9 +52,10 @@ public class ImagesPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "IM-016")]
     public void Refresh_InUseFirst_ThenRepositoryOrder()
     {
-        // AC9
+        //
         var (vm, _) = Create(ThreeImages);
 
         Assert.Equal("alpine:3.20", vm.Items[0].DisplayName);   // 被引用 + 仓库名最靠前
@@ -59,6 +64,8 @@ public class ImagesPageViewModelTests
     }
 
     [Theory]
+    [Trait("case", "IM-013")]
+    [Trait("case", "IM-017")]
     [InlineData("hello", 1)]
     [InlineData("ALPINE", 1)]
     [InlineData("3.20", 1)]
@@ -68,17 +75,18 @@ public class ImagesPageViewModelTests
     [InlineData("不存在", 0)]
     public void Search_FiltersCaseInsensitive_AcrossRepositoryTagAndId(string needle, int expected)
     {
-        // AC8
+        //
         var (vm, _) = Create(ThreeImages);
 
         vm.SearchText = needle;
 
         Assert.Equal(expected, vm.Items.Count);
-        Assert.Equal(3, vm.TotalCount);                 // AC10:汇总不受过滤影响
+        Assert.Equal(3, vm.TotalCount);                 // 汇总不受过滤影响
         Assert.Equal("共 3 个镜像 · 3 个有标签 · 2 个正被容器引用", vm.Summary);
     }
 
     [Fact]
+    [Trait("case", "IM-012")]
     public async Task RefreshFailure_KeepsPreviousData_AndShowsCleanedError()
     {
         var cli = new FakeWslcCli()
@@ -91,12 +99,13 @@ public class ImagesPageViewModelTests
         await vm.RefreshAsync();
 
         Assert.True(vm.HasError);
-        Assert.Equal(3, vm.Items.Count);                                   // AC7:旧数据保留
+        Assert.Equal(3, vm.Items.Count);                                   // 旧数据保留
         Assert.Contains("WSLC_E_ENGINE_NOT_READY", vm.Error);
         Assert.DoesNotContain("如果此错误是意外错误", vm.Error);             // 样板提示被清掉
     }
 
     [Fact]
+    [Trait("case", "IM-012")]
     public async Task RefreshAfterError_ClearsErrorWhenItWorksAgain()
     {
         var cli = new FakeWslcCli()
@@ -114,6 +123,7 @@ public class ImagesPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "IM-022")]
     public async Task Refresh_IgnoresReentrantCalls()
     {
         var cli = new GateCli(ThreeImages);
@@ -133,9 +143,10 @@ public class ImagesPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "IM-019")]
     public async Task NoAutoRefresh_PollsNothing()
     {
-        // AC12:镜像页不自动刷新,放着不动不会产生进程调用。
+        // 镜像页不自动刷新,放着不动不会产生进程调用。
         var (vm, cli) = Create(ThreeImages);
 
         await Task.Delay(150);

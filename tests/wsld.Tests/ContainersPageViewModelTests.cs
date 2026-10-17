@@ -5,7 +5,7 @@ using wsld.Core.WslcCli;
 
 namespace wsld.Tests;
 
-/// <summary>功能 001 · AC1/AC2/AC5/AC6/AC7:容器列表页 ViewModel 行为。</summary>
+/// <summary>册子 CL-001、CL-003–CL-008、CL-011–CL-015、CL-017、CL-020:容器列表页 ViewModel 行为。</summary>
 public class ContainersPageViewModelTests
 {
     private const string RunningJson = """{"ID":"aaaa11112222","Names":"web","Image":"nginx:latest","State":"running","Status":"Up 2 hours","Command":"nginx -g","Networks":"bridge"}""";
@@ -20,9 +20,10 @@ public class ContainersPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CL-001")]
     public void Constructor_TriggersFirstRefresh()
     {
-        // AC1:构造即加载;FakeWslcCli 同步完成,构造返回时首轮刷新已结束。
+        // 构造即加载;FakeWslcCli 同步完成,构造返回时首轮刷新已结束。
         var (vm, cli) = Create(TwoContainers);
         Assert.Single(cli.Calls);
         Assert.Equal(2, vm.Items.Count);
@@ -30,6 +31,9 @@ public class ContainersPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CL-005")]
+    [Trait("case", "CL-006")]
+    [Trait("case", "CL-013")]
     public void Refresh_PopulatesItemsAndCounts()
     {
         var (vm, _) = Create(TwoContainers);
@@ -42,6 +46,7 @@ public class ContainersPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CL-003")]
     public void Refresh_RunningContainersFirst()
     {
         var (vm, _) = Create(TwoContainers);
@@ -49,6 +54,8 @@ public class ContainersPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CL-014")]
+    [Trait("case", "CL-005")]
     public void ShowStoppedFalse_HidesExited()
     {
         var (vm, _) = Create(TwoContainers);
@@ -60,6 +67,8 @@ public class ContainersPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CL-011")]
+    [Trait("case", "CL-015")]
     public void Search_FiltersByNameImageAndId_CaseInsensitive()
     {
         var (vm, _) = Create(TwoContainers);
@@ -77,6 +86,7 @@ public class ContainersPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CL-012")]
     public void Search_DoesNotCallCli()
     {
         var (vm, cli) = Create(TwoContainers);
@@ -84,10 +94,11 @@ public class ContainersPageViewModelTests
 
         vm.SearchText = "web";
 
-        Assert.Equal(callsBefore, cli.Calls.Count); // AC6:过滤不重新调用 CLI
+        Assert.Equal(callsBefore, cli.Calls.Count); // 过滤不重新调用 CLI
     }
 
     [Fact]
+    [Trait("case", "CL-020")]
     public async Task Refresh_Failure_KeepsPreviousItems_AndSetsError()
     {
         var cli = new FakeWslcCli().AlwaysReturn(0, TwoContainers);
@@ -99,10 +110,11 @@ public class ContainersPageViewModelTests
 
         Assert.True(vm.HasError);
         Assert.Contains("dockerd 未运行", vm.Error);
-        Assert.Equal(2, vm.Items.Count); // AC1:保留上一次数据
+        Assert.Equal(2, vm.Items.Count); // 保留上一次数据
     }
 
     [Fact]
+    [Trait("case", "CL-017")]
     public void Refresh_NdjsonParseFailure_SurfacesErrorMessage()
     {
         var (vm, _) = Create("这不是 JSON");
@@ -111,6 +123,7 @@ public class ContainersPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CL-008")]
     public void Refresh_IsReentrantGuarded()
     {
         var gate = new GateWslcCli();
@@ -118,7 +131,7 @@ public class ContainersPageViewModelTests
         var vm = new ContainersPageViewModel(new ContainersService(gate), uiThread: null);
         SpinWait.SpinUntil(() => gate.StartedCalls >= 1, TimeSpan.FromSeconds(5));
 
-        var second = vm.RefreshAsync(CancellationToken.None); // AC7:应直接返回
+        var second = vm.RefreshAsync(CancellationToken.None); // 应直接返回
 
         Assert.True(second.IsCompleted);
         Assert.Equal(1, gate.StartedCalls);
@@ -126,19 +139,21 @@ public class ContainersPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CL-004")]
     public void EmptyList_WhenNoContainers()
     {
         var (vm, _) = Create();
 
         Assert.Empty(vm.Items);
-        Assert.False(vm.HasError);           // AC2:空不是错误
+        Assert.False(vm.HasError);           // 空不是错误
         Assert.Equal(0, vm.TotalCount);
     }
 
     [Fact]
+    [Trait("case", "CL-007")]
     public async Task AutoRefresh_FiresOnTheFixedCadence_AndStopsWhenStopped()
     {
-        // 功能 001:自动刷新间隔钉死 3 秒、界面不给调(每次刷新都要起一个 wslc 子进程)。
+        // container-list 册:自动刷新间隔钉死 3 秒、界面不给调(每次刷新都要起一个 wslc 子进程)。
         // 这条用例就是那个决定的锁:有人把间隔改回去或把循环改坏,这里先红。
         Assert.Equal(3, ContainersPageViewModel.AutoRefreshSeconds);
 

@@ -3,8 +3,9 @@ using System.Text.RegularExpressions;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 012 的第二道 XAML 闸:ComboBox 的候选项不要用"内联 ComboBoxItem + 绑定内容"。
-/// 实测:那种写法的 Content 要延后求值,ComboBox 初始化时抄进选框的是空内容 ——
+/// 第二道 XAML 闸(工程闸,不属册子 Scenario,故不挂册子编号):ComboBox 的候选项不要用
+/// "内联 ComboBoxItem + 绑定内容"。这类错对不上任何一条用户可见契约——它守的是"某类界面
+/// 错误不再出现"。实测:那种写法的 Content 要延后求值,ComboBox 初始化时抄进选框的是空内容 ——
 /// 序号已经选中 0,框里却什么都不显示,只有把下拉列表点开过一次才有字。
 /// 换成纯字符串(ItemsSource 或 x:String 子项)就正常,所以把这条规矩钉成单测。
 /// </summary>

@@ -21,9 +21,14 @@ dev: build
     @$e = Get-ChildItem src/wsld/bin -Recurse -Filter wsld.exe | Sort-Object LastWriteTime -Descending | Select-Object -First 1; \
     if ($e) { "启动:$($e.FullName)"; Start-Process -FilePath $e.FullName } else { "没找到 wsld.exe —— 先看上面的编译输出是否报错"; exit 1 }
 
-# 跑单元测试(不依赖真实 wslc,405 项)
+# 跑单元测试(不依赖真实 wslc,460 项)
 test:
     @dotnet test {{tests}} --nologo -v q
+
+# 册子编号与用例对账:docs/specs 里的 Scenario 编号 ↔ 测试里的 [Trait("case","XX-001")]
+# 默认"册里有号、测试没挂"只提醒;加 -Strict 连这种也算失败
+casecov *args:
+    @powershell -NoProfile -ExecutionPolicy Bypass -File tools\spec-casecov.ps1 {{args}}
 
 # 端到端冒烟:要本机真的有 wslc.exe。会自建一个专用容器,跑完 启动/停止/重启/删除 后自动清理
 itest:

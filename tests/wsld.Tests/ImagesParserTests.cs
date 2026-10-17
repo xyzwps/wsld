@@ -2,10 +2,12 @@ using wsld.Core.Parsing;
 
 namespace wsld.Tests;
 
-/// <summary>功能 003 · AC2/AC3/AC4:镜像 NDJSON 解析。</summary>
+/// <summary>册子 IM-002、IM-003、IM-004、IM-006、IM-009、IM-010、IM-011:镜像 NDJSON 解析 —— 字段与输出形态的兼容。</summary>
 public class ImagesParserTests
 {
     [Fact]
+    [Trait("case", "IM-002")]
+    [Trait("case", "IM-003")]
     public void RealOutput_MapsAllFields()
     {
         var items = WslcJsonParser.ParseImages(FixtureLoader.Read("wslc-images.ndjson"));
@@ -24,6 +26,7 @@ public class ImagesParserTests
     }
 
     [Theory]
+    [Trait("case", "IM-009")]
     [InlineData("")]
     [InlineData("\r\n")]
     [InlineData("   ")]
@@ -33,6 +36,7 @@ public class ImagesParserTests
     }
 
     [Fact]
+    [Trait("case", "IM-010")]
     public void JsonArray_IsSupported()
     {
         var text = """[{"ID":"a1","Repository":"redis","Tag":"7"},{"ID":"b2","Repository":"nginx","Tag":"latest"}]""";
@@ -42,6 +46,7 @@ public class ImagesParserTests
     }
 
     [Fact]
+    [Trait("case", "IM-010")]
     public void SinglePrettyPrintedObject_IsSupported()
     {
         var text = """
@@ -59,6 +64,7 @@ public class ImagesParserTests
     }
 
     [Fact]
+    [Trait("case", "IM-004")]
     public void MissingFields_DefaultToEmptyString_NoThrow()
     {
         var items = WslcJsonParser.ParseImages("""{"ID":"only-id"}""");
@@ -70,6 +76,8 @@ public class ImagesParserTests
     }
 
     [Theory]
+    [Trait("case", "IM-003")]
+    [Trait("case", "IM-004")]
     [InlineData("""{"ID":"x","Containers":"3"}""", 3)]
     [InlineData("""{"ID":"x","Containers":3}""", 3)]
     [InlineData("""{"ID":"x","Containers":0}""", 0)]
@@ -78,12 +86,13 @@ public class ImagesParserTests
     [InlineData("""{"ID":"x","Containers":null}""", 0)]
     public void ContainersField_AcceptsStringAndNumber(string json, int expected)
     {
-        // AC3:wslc 3.0.1 用字符串给数字,未来若改成 JSON 数字也必须读得懂。
+        // wslc 3.0.1 用字符串给数字,未来若改成 JSON 数字也必须读得懂。
         var item = Assert.Single(WslcJsonParser.ParseImages(json));
         Assert.Equal(expected, item.ContainerCount);
     }
 
     [Fact]
+    [Trait("case", "IM-011")]
     public void BadLine_ReportsLineNumberAndType()
     {
         var text = """
@@ -96,6 +105,7 @@ public class ImagesParserTests
     }
 
     [Fact]
+    [Trait("case", "IM-006")]
     public void SameIdWithTwoTags_KeepsBothRows()
     {
         // 实测:wslc tag 之后 images 会为每个引用输出一行,ID 相同。

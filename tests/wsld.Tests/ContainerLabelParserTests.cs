@@ -2,10 +2,11 @@ using wsld.Core.Parsing;
 
 namespace wsld.Tests;
 
-/// <summary>容器标签串的拆分:wslc 只给一条逗号拼接的串,而值里就带逗号。</summary>
+/// <summary>册子 CD-013、CD-014、CD-015、CD-016:容器标签串的拆分——wslc 只给一条逗号拼接的串,而值里就带逗号。</summary>
 public class ContainerLabelParserTests
 {
     [Theory]
+    [Trait("case", "CD-016")]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
@@ -15,6 +16,7 @@ public class ContainerLabelParserTests
     }
 
     [Fact]
+    [Trait("case", "CD-013")]
     public void 普通多标签_按逗号拆开()
     {
         var labels = ContainerLabelParser.Parse("a=1,org.opencontainers.image.title=Foo,wslcd=test");
@@ -26,6 +28,7 @@ public class ContainerLabelParserTests
     }
 
     [Fact]
+    [Trait("case", "CD-013")]
     public void 最后一条标签_键值都在()
     {
         var labels = ContainerLabelParser.Parse("a=1,wslcd=test");
@@ -33,6 +36,7 @@ public class ContainerLabelParserTests
     }
 
     [Fact]
+    [Trait("case", "CD-014")]
     public void 值里的等号与URL_原样保留()
     {
         var labels = ContainerLabelParser.Parse("url=https://x.io/?a=b&c=d,org.opencontainers.image.source=https://github.com/o/r");
@@ -44,6 +48,7 @@ public class ContainerLabelParserTests
     }
 
     [Fact]
+    [Trait("case", "CD-014")]
     public void 值里的逗号_后面不像标签名就不拆()
     {
         var labels = ContainerLabelParser.Parse("desc=hello, world,org.opencontainers.image.created=2026");
@@ -54,6 +59,7 @@ public class ContainerLabelParserTests
     }
 
     [Fact]
+    [Trait("case", "CD-014")]
     public void 镜像元数据里的JSON_整串算一个值()
     {
         // 真机样例:com.microsoft.wsl.container.metadata 的值是一坨带逗号的 JSON。
@@ -69,6 +75,7 @@ public class ContainerLabelParserTests
     }
 
     [Fact]
+    [Trait("case", "CD-014")]
     public void 引号内的逗号与转义引号_不会错算边界()
     {
         // 值原样保留(连引号与反斜杠一起),这里只保证引号里那个逗号没被当成边界。
@@ -81,6 +88,8 @@ public class ContainerLabelParserTests
     }
 
     [Fact]
+    [Trait("case", "CD-013")]
+    [Trait("case", "CD-014")]
     public void 描述里带方括号与句号_真边界照样拆得开()
     {
         // 真机样例:描述是一段英文句子,里面既有逗号又有 [..](..) 这类括号。
@@ -95,6 +104,7 @@ public class ContainerLabelParserTests
     }
 
     [Fact]
+    [Trait("case", "CD-015")]
     public void 整串没有等号_原样留成一条不丢数据()
     {
         var labels = ContainerLabelParser.Parse("garbage without equals, but still text");
@@ -105,6 +115,7 @@ public class ContainerLabelParserTests
     }
 
     [Fact]
+    [Trait("case", "CD-013")]
     public void 键值两端空白_收干净()
     {
         var labels = ContainerLabelParser.Parse("  a = 1 , b=2 ");

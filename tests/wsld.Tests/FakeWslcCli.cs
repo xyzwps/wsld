@@ -12,12 +12,12 @@ public sealed class FakeWslcCli : IWslcCli
 
     public List<IReadOnlyList<string>> Calls { get; } = new();
 
-    /// <summary>逐行回调的接管者(功能 005 · AC7/AC8 用它制造"进程还在流"的场景)。</summary>
+    /// <summary>逐行回调的接管者(container-logs 册 · 用它制造"进程还在流"的场景)。</summary>
     public Func<IReadOnlyList<string>, Action<string>?, CancellationToken, Task<WslcCliResult>>? StreamHandler { get; set; }
 
     public List<IReadOnlyList<string>> StreamCalls { get; } = new();
 
-    /// <summary>伪终端路径的接管者(功能 011):用它制造"进度一帧一帧到达"的场景。</summary>
+    /// <summary>伪终端路径的接管者(pull-progress 册):用它制造"进度一帧一帧到达"的场景。</summary>
     public Func<IReadOnlyList<string>, Action<IReadOnlyList<string>>?, CancellationToken, Task<WslcCliResult>>? ConsoleHandler { get; set; }
 
     /// <summary>只记录走伪终端的调用。</summary>
@@ -29,7 +29,7 @@ public sealed class FakeWslcCli : IWslcCli
         return this;
     }
 
-    /// <summary>排一个"边读边回调"的脚本:stdout 按实测的 LF 拆成行,每行都会立刻交给回调(AC7)。</summary>
+    /// <summary>排一个"边读边回调"的脚本:stdout 按实测的 LF 拆成行,每行都会立刻交给回调。</summary>
     public FakeWslcCli EnqueueStream(int exitCode, string stdout, string stderr = "")
     {
         _scriptedStreams.Enqueue((exitCode, WslcLogText.Split(stdout), stderr));
@@ -84,7 +84,7 @@ public sealed class FakeWslcCli : IWslcCli
     }
 
     /// <summary>
-    /// 伪终端路径(功能 011)。默认行为与真实现同构:结果照脚本走,屏幕行一次性回调 ——
+    /// 伪终端路径(pull-progress 册)。默认行为与真实现同构:结果照脚本走,屏幕行一次性回调 ——
     /// 差别只在真实现是"边渲染边回调",这里由 ConsoleHandler 制造中途的帧。
     /// </summary>
     public Task<WslcCliResult> RunWithConsoleAsync(

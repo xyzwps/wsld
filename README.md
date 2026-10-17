@@ -11,22 +11,27 @@
 
 ## 功能
 
-每个功能都有一份 spec(是什么 / 为什么 / 预期行为)和对应的单元测试。
+用户能看见什么,写在 `docs/specs/` 的用例册里 —— 一个能力一册,一条条 `Scenario` 就是验收标准,
+每条带稳定编号(`CL-001` 这种),测试用 `[Trait("case", "CL-001")]` 挂上去对账。
+为什么这么定、实测到的 `wslc` 行为在 [docs/notes/](docs/notes/index.md)。
 
-| 编号 | 功能 | 状态 | 规格 |
-|---|---|---|---|
-| 001 | 容器列表 | 已实现 | [docs/specs/001-container-list.md](docs/specs/001-container-list.md) |
-| 002 | 容器生命周期操作(启动/停止/重启/删除) | 已实现 | [docs/specs/002-container-actions.md](docs/specs/002-container-actions.md) |
-| 003 | 镜像列表与应用导航 | 已实现 | [docs/specs/003-images.md](docs/specs/003-images.md) |
-| 004 | 镜像操作(拉取 / 删除) | 已实现 | [docs/specs/004-image-actions.md](docs/specs/004-image-actions.md) |
-| 005 | 容器日志(尾部行数 / 时间戳 / 实时跟随) | 已实现 | [docs/specs/005-container-logs.md](docs/specs/005-container-logs.md) |
-| 006 | 进入容器(执行命令) | 规划 | — |
-| 007 | 资源统计 stats | 规划 | — |
-| 008 | 网络与卷 | 规划 | — |
-| 009 | 设置页(主题 / 语言 i18n)与界面改版 | 已实现 | [docs/specs/009-settings-i18n-theme.md](docs/specs/009-settings-i18n-theme.md) |
-| 010 | 镜像加速(registry mirror)配置与拉取改名 | 已实现 | [docs/specs/010-registry-mirror.md](docs/specs/010-registry-mirror.md) |
-| 011 | 拉取镜像的实时进度(伪终端屏幕 + 分层汇总) | 已实现 | [docs/specs/011-pull-progress.md](docs/specs/011-pull-progress.md) |
-| 012 | `wslc run` 命令可视化编排(生成 / 复制 / 就地执行 / 粘贴读回) | 已实现 | [docs/specs/012-run-command-builder.md](docs/specs/012-run-command-builder.md) |
+| 能力 | 册子 | 编号 |
+|---|---|---|
+| 容器列表(刷新 / 搜索 / 汇总) | [container-list.md](docs/specs/container-list.md) | CL |
+| 容器详情卡片 | [container-detail.md](docs/specs/container-detail.md) | CD |
+| 容器生命周期操作(启动/停止/重启/删除) | [container-actions.md](docs/specs/container-actions.md) | CA |
+| 容器日志(查看 / 实时) | [container-logs.md](docs/specs/container-logs.md) | LG |
+| 镜像列表(搜索 / 排序 / 汇总) | [images.md](docs/specs/images.md) | IM |
+| 镜像操作(拉取 / 删除 / 强制删除) | [image-actions.md](docs/specs/image-actions.md) | IA |
+| 拉取实时进度(分层屏幕 + 汇总) | [pull-progress.md](docs/specs/pull-progress.md) | PP |
+| 镜像加速(引用改写与拉后改名) | [registry-mirror.md](docs/specs/registry-mirror.md) | RM |
+| `wslc run` 命令编排 | [run-builder.md](docs/specs/run-builder.md) | RB |
+| 界面外壳(顶栏 / 导航 / 图标键 / 几何) | [shell.md](docs/specs/shell.md) | SH |
+| 外观主题 | [theme.md](docs/specs/theme.md) | TH |
+| 界面语言与词条 | [i18n.md](docs/specs/i18n.md) | LANG |
+| 设置读写与关于卡片 | [settings.md](docs/specs/settings.md) | SET |
+
+还没动的规划项:进入容器(执行命令)、资源统计 stats、网络与卷 —— 动手时各开一册。
 
 ## 开始使用
 
@@ -45,7 +50,8 @@ just test   # 单元测试
 
 | 文档 | 讲什么 |
 |---|---|
-| [docs/development.md](docs/development.md) | 环境、命令、工程结构、单元与端到端测试 |
+| [docs/development.md](docs/development.md) | 环境、命令、工程结构、单元与端到端测试、规格册怎么写 |
 | [docs/release-packaging.md](docs/release-packaging.md) | 打交付给客户安装包:方案、图标、代码签名/SmartScreen、常见问题 |
-| [docs/specs/](docs/specs/) | 各功能的规格与预期行为 |
+| [docs/specs/](docs/specs/) | 用例册:用户能看见什么(一条条 Scenario,测试照着对账) |
+| [docs/notes/](docs/notes/index.md) | 依据记录:为什么这么定、实测到的 `wslc` / WinUI 外部行为 |
 | [docs/dev-notes.md](docs/dev-notes.md) | 会反复踩到、网上查不到的坑(WinUI 3 / 构建 / 布局) |

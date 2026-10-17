@@ -7,8 +7,9 @@ using wsld.Core.WslcCli;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 010 · AC2/AC3/AC4/AC5/AC6:镜像页在启用镜像源后的拉取编排
-/// (改写引用 → wslc pull → wslc tag 改回用户写的名字 → wslc rmi 去掉镜像站标签)。
+/// 册子 RM-004–RM-008、RM-011、RM-014–RM-022 · 「拉完之后把名字改回用户写的那个」一节的可执行对应:
+/// 镜像页在启用镜像源后的拉取编排(改写引用 → wslc pull → wslc tag 改回用户写的名字 → wslc rmi 去掉镜像站标签),
+/// 外加设置页/镜像页两处实时说明跟着设置走的那一节。结果清洗与取消的口径对 IA,等待句对 PP。
 /// 假 CLI 按动词路由,所以"成功后刷新一次"不会打乱 pull/tag/rmi 的脚本顺序。
 /// </summary>
 public class ImagesPageMirrorPullTests
@@ -34,9 +35,11 @@ public class ImagesPageMirrorPullTests
         如果此错误是意外错误，请考虑搜索现有问题或在 https://github.com/microsoft/WSL/issues 提交新问题。
         """;
 
-    // ---------- AC2 / AC5 · 改写 + 改名 ----------
+    // ---------- 改写 + 改名 ----------
 
     [Fact]
+    [Trait("case", "RM-016")]
+    [Trait("case", "RM-019")]
     public async Task Pull_WithMirror_RewritesReferenceThenRenamesBack()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }
@@ -49,17 +52,18 @@ public class ImagesPageMirrorPullTests
         var result = await vm.PullAsync();
 
         Assert.NotNull(result);
-        Assert.Equal(new[] { "pull", ViaMirror }, cli.LastCall("pull"));   // AC2:实际拉的是改写后的引用
+        Assert.Equal(new[] { "pull", ViaMirror }, cli.LastCall("pull"));   // 实际拉的是改写后的引用
         Assert.Equal(new[] { "tag", ViaMirror, Typed }, cli.LastCall("tag"));
         Assert.Equal(new[] { "rmi", ViaMirror }, cli.LastCall("rmi"));
-        Assert.Equal(new[] { "pull", "tag", "rmi" }, ActionVerbs(cli));     // AC5:顺序不能反,反了就把镜像删了
+        Assert.Equal(new[] { "pull", "tag", "rmi" }, ActionVerbs(cli));     // 顺序不能反,反了就把镜像删了
         Assert.Equal(Typed, result!.Reference);                             // 提示按用户写的名字报
         Assert.Equal("已拉取 redis:7", vm.Notice);
-        Assert.False(vm.HasError);                                          // AC6:改名成功就不该有红条
+        Assert.False(vm.HasError);                                          // 改名成功就不该有红条
         Assert.False(vm.IsBusy);
     }
 
     [Fact]
+    [Trait("case", "RM-019")]
     public async Task Pull_WithMirror_RefreshesTheListExactlyOnceAfterRenaming()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }
@@ -75,6 +79,7 @@ public class ImagesPageMirrorPullTests
     }
 
     [Fact]
+    [Trait("case", "RM-018")]
     public async Task Pull_WithMirror_RenameCanBeTurnedOffInSettings()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }.Enqueue(0, PullNewStatus);
@@ -89,9 +94,11 @@ public class ImagesPageMirrorPullTests
         Assert.Equal("已拉取 " + ViaMirror, vm.Notice);   // 没改名,就按镜像站那个全名报
     }
 
-    // ---------- AC3 · 不该改写的引用 ----------
+    // ---------- 不该改写的引用 ----------
 
     [Theory]
+    [Trait("case", "RM-011")]
+    [Trait("case", "RM-017")]
     [InlineData("ghcr.io/org/app:1")]
     [InlineData("mcr.microsoft.com/dotnet/runtime:8.0")]
     [InlineData(ViaMirror)]   // 已经写了镜像站全名,不用再加一层
@@ -110,6 +117,8 @@ public class ImagesPageMirrorPullTests
     }
 
     [Fact]
+    [Trait("case", "RM-004")]
+    [Trait("case", "RM-006")]
     public async Task Pull_WithoutMirror_PullsExactlyWhatWasTyped()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }.Enqueue(0, "Status: Downloaded newer image for redis:7");
@@ -122,9 +131,11 @@ public class ImagesPageMirrorPullTests
         Assert.Equal(0, cli.CountCalls("tag"));
     }
 
-    // ---------- AC6 · 改名失败不能把成功说成失败 ----------
+    // ---------- 改名失败不能把成功说成失败 ----------
 
     [Fact]
+    [Trait("case", "RM-021")]
+    [Trait("case", "IA-013")]
     public async Task Pull_RenameAfterMirrorFails_ReportsPulledImagePlusAWarning()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }
@@ -146,6 +157,8 @@ public class ImagesPageMirrorPullTests
     }
 
     [Fact]
+    [Trait("case", "RM-022")]
+    [Trait("case", "IA-013")]
     public async Task Pull_OldMirrorTagRemovalFails_ReportsRenamedNamePlusAWarning()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }
@@ -164,9 +177,11 @@ public class ImagesPageMirrorPullTests
         Assert.DoesNotContain("如果此错误是意外错误", vm.Error);
     }
 
-    // ---------- AC5 · 取消之后不做改名 ----------
+    // ---------- 取消之后不做改名 ----------
 
     [Fact]
+    [Trait("case", "RM-020")]
+    [Trait("case", "IA-011")]
     public async Task Pull_Cancelled_BeforeItFinishes_DoesNotRename()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages };
@@ -183,6 +198,9 @@ public class ImagesPageMirrorPullTests
     }
 
     [Fact]
+    [Trait("case", "PP-014")]
+    [Trait("case", "RM-016")]
+    [Trait("case", "PP-011")]
     public async Task Pull_WhileItIsRunning_BusyTextNamesTheMirrorReference()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages };
@@ -204,9 +222,11 @@ public class ImagesPageMirrorPullTests
         Assert.False(vm.IsBusy);
     }
 
-    // ---------- AC4 · 输入框下面那行"实际会拉…" ----------
+    // ---------- 输入框下面那行"实际会拉…" ----------
 
     [Fact]
+    [Trait("case", "RM-007")]
+    [Trait("case", "RM-014")]
     public void PullMirrorHint_ShowsTheRewrittenReference()
     {
         var vm = Create(new RoutingWslcCli { ListJson = TwoImages },
@@ -217,13 +237,15 @@ public class ImagesPageMirrorPullTests
         Assert.Equal("镜像源实际会拉取:" + ViaMirror, vm.PullMirrorHint);
         Assert.Equal(ViaMirror, vm.EffectivePullReference);
 
-        vm.PullText = "ghcr.io/actions/runner:2";   // AC3:不该改写的引用,那行说明也不该出现
+        vm.PullText = "ghcr.io/actions/runner:2";   // 不该改写的引用,那行说明也不该出现
         Assert.False(vm.HasPullMirrorHint);
         Assert.Equal("ghcr.io/actions/runner:2", vm.EffectivePullReference);
         Assert.Equal("", vm.PullMirrorHint);
     }
 
     [Fact]
+    [Trait("case", "RM-004")]
+    [Trait("case", "RM-014")]
     public void PullMirrorHint_IsQuietWhenNoMirrorIsConfigured()
     {
         var vm = Create(new RoutingWslcCli { ListJson = TwoImages }, new AppSettings());
@@ -235,6 +257,8 @@ public class ImagesPageMirrorPullTests
     }
 
     [Fact]
+    [Trait("case", "RM-004")]
+    [Trait("case", "RM-015")]
     public void RefreshMirrorState_RecomputesTheHintAfterTheSettingsPageChangesTheMirror()
     {
         // 设置页与镜像页共用同一个 AppSettings 实例,页面又是缓存的,只能靠这个事件把预览推平。
@@ -256,6 +280,8 @@ public class ImagesPageMirrorPullTests
     }
 
     [Fact]
+    [Trait("case", "RM-008")]
+    [Trait("case", "RM-014")]
     public void ChangingPullText_AlsoRefreshesTheMirrorHint()
     {
         var vm = Create(new RoutingWslcCli { ListJson = TwoImages }, MirrorSettings());

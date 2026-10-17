@@ -5,7 +5,7 @@ using wsld.Core.WslcCli;
 
 namespace wsld.Tests;
 
-/// <summary>功能 002 · AC5–AC11:容器操作在页面 ViewModel 上的编排行为。</summary>
+/// <summary>册子 CA-001–CA-006、CA-008–CA-016、CA-023、CL-010:容器操作在页面 ViewModel 上的编排行为。</summary>
 public class ContainerActionsViewModelTests
 {
     private const string RunningJson = """{"ID":"aaaa11112222","Names":"web","Image":"nginx:latest","State":"running","Status":"Up","Command":"nginx","Networks":"bridge"}""";
@@ -24,9 +24,11 @@ public class ContainerActionsViewModelTests
     private static ContainerItemViewModel Item(ContainersPageViewModel vm, string name) =>
         vm.Items.Single(i => i.DisplayName == name);
 
-    // ---------- AC1:命令映射(经由命令入口) ----------
+    // ---------- 命令映射(经由命令入口) ----------
 
     [Fact]
+    [Trait("case", "CA-002")]
+    [Trait("case", "CA-011")]
     public async Task Stop_CallsWslcStopThenRefreshes()
     {
         var (vm, cli) = Create(TwoContainers);
@@ -40,6 +42,8 @@ public class ContainerActionsViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CA-001")]
+    [Trait("case", "CA-006")]
     public async Task StartCommand_CallsWslcStartWithIdNotName()
     {
         var (vm, cli) = Create(TwoContainers);
@@ -50,6 +54,7 @@ public class ContainerActionsViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CA-003")]
     public async Task Restart_CallsWslcRestart()
     {
         var (vm, cli) = Create(TwoContainers);
@@ -59,9 +64,10 @@ public class ContainerActionsViewModelTests
         Assert.Contains(new[] { "restart", "bbbb22223333" }, cli.Calls.Select(a => a.ToArray()));
     }
 
-    // ---------- AC9/AC10:运行中的容器删除自动转强制 ----------
+    // ---------- 运行中的容器删除自动转强制 ----------
 
     [Fact]
+    [Trait("case", "CA-005")]
     public async Task RemoveRunningContainer_UsesForceFlag()
     {
         var (vm, cli) = Create(TwoContainers);
@@ -72,6 +78,7 @@ public class ContainerActionsViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CA-004")]
     public async Task RemoveStoppedContainer_DoesNotForce()
     {
         var (vm, cli) = Create(TwoContainers);
@@ -81,9 +88,11 @@ public class ContainerActionsViewModelTests
         Assert.Contains(new[] { "remove", "bbbb22223333" }, cli.Calls.Select(a => a.ToArray()));
     }
 
-    // ---------- AC9:行内那个"启动"键的可用性 ----------
+    // ---------- 行内那个"启动"键的可用性 ----------
 
     [Fact]
+    [Trait("case", "CA-015")]
+    [Trait("case", "CA-016")]
     public void RowStartButton_AvailabilityRunsOnState()
     {
         var (vm, _) = Create(TwoContainers);
@@ -93,9 +102,10 @@ public class ContainerActionsViewModelTests
         // 停止 / 重启 / 删除不在行内,可用性由详情面板管(ContainerDetailViewModelTests)。
     }
 
-    // ---------- AC7:成功后刷新一次 ----------
+    // ---------- 成功后刷新一次 ----------
 
     [Fact]
+    [Trait("case", "CA-011")]
     public async Task Success_ClearsErrorAndRefreshesOnce()
     {
         var (vm, cli) = Create(TwoContainers);
@@ -108,6 +118,7 @@ public class ContainerActionsViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CA-012")]
     public async Task RemoveSuccess_ContainerDisappearsFromList()
     {
         var cli = new FakeWslcCli();
@@ -123,9 +134,11 @@ public class ContainerActionsViewModelTests
         Assert.Equal(1, vm.TotalCount);
     }
 
-    // ---------- AC8:失败不刷新、保留数据 ----------
+    // ---------- 失败不刷新、保留数据 ----------
 
     [Fact]
+    [Trait("case", "CA-013")]
+    [Trait("case", "CA-014")]
     public async Task Failure_DoesNotRefresh_SetsCleanedError_KeepsItems()
     {
         var cli = new FakeWslcCli();
@@ -141,9 +154,13 @@ public class ContainerActionsViewModelTests
         Assert.Equal(2, cli.Calls.Count);  // 没有再调用 list
     }
 
-    // ---------- AC5:忙碌互斥 ----------
+    // ---------- 忙碌互斥 ----------
 
     [Fact]
+    [Trait("case", "CA-008")]
+    [Trait("case", "CA-009")]
+    [Trait("case", "CA-010")]
+    [Trait("case", "CL-010")]
     public async Task WhileOperationIsRunning_EverythingIsDisabledAndRefreshIsSkipped()
     {
         var cli = new ActionGateCli(TwoContainers);
@@ -166,12 +183,12 @@ public class ContainerActionsViewModelTests
         Assert.False(db.CanStart);
         Assert.False(db.StartCommand.CanExecute(null));
 
-        // AC6:操作期间刷新被跳过
+        // 操作期间刷新被跳过
         var refresh = vm.RefreshAsync(CancellationToken.None);
         Assert.True(refresh.IsCompleted);
         Assert.Equal(2, cli.Calls.Count); // 构造时的 list + 挂起中的 stop
 
-        // AC5:第二个操作被直接忽略
+        // 第二个操作被直接忽略
         var second = vm.ExecuteAsync(db, ContainerAction.Restart);
         Assert.True(second.IsCompleted);
         Assert.Equal(2, cli.Calls.Count);
@@ -186,9 +203,10 @@ public class ContainerActionsViewModelTests
         Assert.Equal(3, cli.Calls.Count); // 成功后补一次 list
     }
 
-    // ---------- AC11:行对象复用 ----------
+    // ---------- 行对象复用 ----------
 
     [Fact]
+    [Trait("case", "CA-023")]
     public async Task Refresh_ReusesRowInstancesAndUpdatesState()
     {
         var cli = new FakeWslcCli();
@@ -209,6 +227,7 @@ public class ContainerActionsViewModelTests
     }
 
     [Fact]
+    [Trait("case", "CA-023")]
     public async Task Refresh_WhenNothingChanged_KeepsCollectionIntact()
     {
         var (vm, _) = Create(TwoContainers);
@@ -222,6 +241,8 @@ public class ContainerActionsViewModelTests
     // ---------- UI 线程契约:IsBusy 清零必须由 UI 线程发出 ----------
 
     [Fact]
+    [Trait("case", "CA-008")]
+    [Trait("case", "CA-009")]
     public async Task BusyIsClearedOnTheUiThreadSoTheSpinnerCanStop()
     {
         // 缺陷原型:wslc start 已返回、容器已在跑,行内却永远转圈。

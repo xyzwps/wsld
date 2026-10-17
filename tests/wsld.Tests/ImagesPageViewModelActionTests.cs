@@ -6,8 +6,8 @@ using wsld.Core.WslcCli;
 namespace wsld.Tests;
 
 /// <summary>
-/// 功能 004 · AC5–AC9、AC12:镜像页 ViewModel 的拉取/删除编排
-/// (全局单操作互斥、可取消、成功后刷新一次、失败保留数据、行状态活过刷新)。
+/// 册子 IA-001、IA-003、IA-005、IA-006、IA-008、IA-009、IA-010、IA-011、IA-012、IA-013、IM-001:
+/// 镜像页 ViewModel 的拉取/删除编排(全局单操作互斥、可取消、成功后刷新一次、失败保留数据)。
 /// </summary>
 public class ImagesPageViewModelActionTests
 {
@@ -24,9 +24,11 @@ public class ImagesPageViewModelActionTests
         如果此错误是意外错误，请考虑搜索现有问题或在 https://github.com/microsoft/WSL/issues 提交新问题。
         """;
 
-    // ---------- AC1 / AC8 · 拉取成功 ----------
+    // ---------- 拉取成功 ----------
 
     [Fact]
+    [Trait("case", "IA-001")]
+    [Trait("case", "IA-005")]
     public async Task Pull_NewImage_SetsNoticeAndRefreshesExactlyOnce()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }
@@ -38,15 +40,16 @@ public class ImagesPageViewModelActionTests
         var result = await vm.PullAsync();
 
         Assert.NotNull(result);
-        Assert.Equal("已拉取 " + NginxRef, vm.Notice);              // AC8
+        Assert.Equal("已拉取 " + NginxRef, vm.Notice);              //
         Assert.True(vm.HasNotice);
         Assert.False(vm.HasError);
         Assert.Equal(new[] { "pull", NginxRef }, cli.LastCall("pull"));
-        Assert.Equal(imagesBefore + 1, cli.CountCalls("images"));    // AC8:只刷新一次
+        Assert.Equal(imagesBefore + 1, cli.CountCalls("images"));    // 只刷新一次
         Assert.False(vm.IsBusy);
     }
 
     [Fact]
+    [Trait("case", "IA-006")]
     public async Task Pull_ExistingImage_ReportsUpToDate()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }
@@ -60,6 +63,7 @@ public class ImagesPageViewModelActionTests
     }
 
     [Fact]
+    [Trait("case", "IA-012")]
     public async Task ManualRefresh_ClearsNotice()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }
@@ -74,9 +78,10 @@ public class ImagesPageViewModelActionTests
         Assert.Null(vm.Notice);   // 手动刷新不带着旧的操作提示
     }
 
-    // ---------- AC2 · 空引用 ----------
+    // ---------- 空引用 ----------
 
     [Fact]
+    [Trait("case", "IA-003")]
     public async Task Pull_EmptyInput_DoesNotStartProcess_AndHints()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages };
@@ -87,10 +92,11 @@ public class ImagesPageViewModelActionTests
 
         Assert.Null(result);
         Assert.Equal(ImagesPageViewModel.EmptyReferenceHint, vm.Error);
-        Assert.Equal(0, cli.CountCalls("pull"));   // AC2:绝不带着空引用去启动进程
+        Assert.Equal(0, cli.CountCalls("pull"));   // 绝不带着空引用去启动进程
     }
 
     [Fact]
+    [Trait("case", "IA-003")]
     public void PullCommand_IsDisabledWhenInputBlank()
     {
         var vm = Create(new RoutingWslcCli { ListJson = TwoImages });
@@ -103,9 +109,12 @@ public class ImagesPageViewModelActionTests
         Assert.True(vm.PullCommand.CanExecute(null));
     }
 
-    // ---------- AC5 · 全局单操作互斥 ----------
+    // ---------- 全局单操作互斥 ----------
 
     [Fact]
+    [Trait("case", "IA-008")]
+    [Trait("case", "IA-009")]
+    [Trait("case", "IA-010")]
     public async Task WhilePulling_SecondOperationIgnored_AndRefreshSkipped()
     {
         var (vm, cli, gate) = CreateGated();
@@ -113,17 +122,17 @@ public class ImagesPageViewModelActionTests
         var pull = vm.PullAsync();
         await WaitUntilAsync(() => vm.IsBusy);
 
-        Assert.False(vm.CanPull);                                     // AC5:拉取中"拉取"按钮不可用
+        Assert.False(vm.CanPull);                                     // 拉取中"拉取"按钮不可用
         Assert.False(vm.PullCommand.CanExecute(null));
         Assert.Equal(2, vm.Items.Count);
-        Assert.All(vm.Items, item => Assert.False(item.CanRemove));    // AC5:每一行的删除都禁用
+        Assert.All(vm.Items, item => Assert.False(item.CanRemove));    // 每一行的删除都禁用
         Assert.All(vm.Items, item => Assert.False(item.RemoveCommand.CanExecute(null)));
 
         var imagesBefore = cli.CountCalls("images");
-        await vm.RefreshAsync();                                       // AC5:操作期间的刷新被跳过
+        await vm.RefreshAsync();                                       // 操作期间的刷新被跳过
         Assert.Equal(imagesBefore, cli.CountCalls("images"));
 
-        Assert.False(await vm.ExecuteRemoveAsync(vm.Items[0]));         // AC5:重复调用被忽略
+        Assert.False(await vm.ExecuteRemoveAsync(vm.Items[0]));         // 重复调用被忽略
         Assert.Equal(0, cli.CountCalls("rmi"));
 
         gate.Complete("Status: Downloaded newer image for alpine:3.20");
@@ -135,6 +144,7 @@ public class ImagesPageViewModelActionTests
     }
 
     [Fact]
+    [Trait("case", "IA-012")]
     public async Task NewOperation_ClearsPreviousNotice()
     {
         var (vm, _, gate) = CreateGated();
@@ -149,16 +159,17 @@ public class ImagesPageViewModelActionTests
         var second = vm.PullAsync();
         await WaitUntilAsync(() => vm.IsBusy);
 
-        Assert.Null(vm.Notice);   // AC8:开始新动作时旧提示被清掉
+        Assert.Null(vm.Notice);   // 开始新动作时旧提示被清掉
 
         gate.Complete("Status: Downloaded newer image for redis:7");
         await second;
         Assert.Equal("已拉取 redis:7", vm.Notice);
     }
 
-    // ---------- AC6 · 取消拉取 ----------
+    // ---------- 取消拉取 ----------
 
     [Fact]
+    [Trait("case", "IA-011")]
     public async Task CancelPull_LeavesNoError_AndDoesNotRefresh()
     {
         var (vm, cli, _) = CreateGated();
@@ -171,11 +182,11 @@ public class ImagesPageViewModelActionTests
         var result = await pull;
 
         Assert.Null(result);
-        Assert.Equal("已取消拉取 " + NginxRef, vm.Notice);                 // AC6
+        Assert.Equal("已取消拉取 " + NginxRef, vm.Notice);                 //
         Assert.False(vm.HasError);
         Assert.False(vm.IsBusy);
         Assert.False(vm.IsPulling);
-        Assert.Equal(imagesBefore, cli.CountCalls("images"));              // AC6:取消不刷新(实测无残留)
+        Assert.Equal(imagesBefore, cli.CountCalls("images"));              // 取消不刷新(实测无残留)
     }
 
     [Fact]
@@ -193,6 +204,7 @@ public class ImagesPageViewModelActionTests
     }
 
     [Fact]
+    [Trait("case", "IA-011")]
     public async Task CancelPullCommand_IsUsableOnlyWhilePulling()
     {
         var (vm, _, gate) = CreateGated();
@@ -209,9 +221,10 @@ public class ImagesPageViewModelActionTests
         Assert.False(vm.CancelPullCommand.CanExecute(null));
     }
 
-    // ---------- AC7 · 进度只做"不确定"表达 ----------
+    // ---------- 进度只做"不确定"表达 ----------
 
     [Fact]
+    [Trait("case", "PP-014")]
     public async Task BusyText_DescribesWhatIsRunningAndTicksSeconds()
     {
         var (vm, _, gate) = CreateGated();
@@ -221,7 +234,7 @@ public class ImagesPageViewModelActionTests
         var pull = vm.PullAsync();
         await WaitUntilAsync(() => vm.IsBusy);
 
-        vm.Tick();   // AC7:界面的 1 秒计时器驱动,这里手动调用免得依赖真实时钟
+        vm.Tick();   // 界面的 1 秒计时器驱动,这里手动调用免得依赖真实时钟
         Assert.Matches(@"^正在拉取 alpine:3\.20 · 已等待 \d+ 秒$", vm.BusyText);
 
         gate.Complete("Status: Downloaded newer image for alpine:3.20");
@@ -231,6 +244,7 @@ public class ImagesPageViewModelActionTests
     }
 
     [Fact]
+    [Trait("case", "IA-022")]
     public async Task Remove_MarksThatRowBusyWhileRunning()
     {
         var (vm, cli, gate) = CreateGated();
@@ -248,9 +262,10 @@ public class ImagesPageViewModelActionTests
         Assert.Equal(new[] { "rmi", target.Reference }, cli.LastCall("rmi"));
     }
 
-    // ---------- AC9 · 失败不丢数据 ----------
+    // ---------- 失败不丢数据 ----------
 
     [Fact]
+    [Trait("case", "IA-013")]
     public async Task Pull_Failure_KeepsListAndShowsCleanedError()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages }.Enqueue(1, "", PullFailStdErr);
@@ -264,11 +279,11 @@ public class ImagesPageViewModelActionTests
         Assert.Contains("E_FAIL", vm.Error);
         Assert.DoesNotContain("如果此错误是意外错误", vm.Error);   // 样板提示被清洗
         Assert.Null(vm.Notice);
-        Assert.Equal(2, vm.Items.Count);                            // AC9:列表还是上一次的数据
+        Assert.Equal(2, vm.Items.Count);                            // 列表还是上一次的数据
         Assert.False(vm.IsBusy);
     }
 
-    // ---------- AC12 · 行状态活过刷新 ----------
+    // ---------- 行状态活过刷新 ----------
 
     [Fact]
     public async Task Refresh_ReusesRowObjectButSwapsUnderlyingData()
@@ -282,13 +297,14 @@ public class ImagesPageViewModelActionTests
         cli.ListJson = BusyBox.Replace("4.45MB", "4.60MB") + "\n" + Hello;   // 同一条镜像,数据变新
         await vm.RefreshAsync();
 
-        Assert.Same(row, vm.Items[0]);                     // AC12:同一个行对象,不是重建
+        Assert.Same(row, vm.Items[0]);                     // 同一个行对象,不是重建
         Assert.NotSame(modelBefore, row.Model);            // 底层数据已换成新解析出来的
         Assert.Equal("4.60MB", row.SizeText);
         Assert.Equal(2, vm.Items.Count);
     }
 
     [Fact]
+    [Trait("case", "IM-001")]
     public async Task Refresh_DropsRowsThatDisappearedFromTheList()
     {
         var cli = new RoutingWslcCli { ListJson = TwoImages };
@@ -304,6 +320,7 @@ public class ImagesPageViewModelActionTests
     }
 
     [Fact]
+    [Trait("case", "IA-022")]
     public async Task Pull_ForAnImageAlreadyInList_MarksThatRowBusy()
     {
         var (vm, _, gate) = CreateGated();

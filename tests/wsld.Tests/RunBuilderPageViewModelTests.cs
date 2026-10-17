@@ -5,7 +5,7 @@ using wsld.Core.WslcCli;
 
 namespace wsld.Tests;
 
-/// <summary>功能 012:"命令编排"页 ViewModel —— 实时重拼、校验门禁、就地执行与粘贴读回。</summary>
+/// <summary>册子 RB:"命令编排"页 ViewModel —— 实时重拼、校验门禁、就地执行与粘贴读回。覆盖 RB-001–003、RB-006、RB-008–010、RB-020、RB-023–025、RB-027–031、RB-033、RB-035–036、RB-038–040、RB-043–045。</summary>
 public class RunBuilderPageViewModelTests
 {
     private static (RunBuilderPageViewModel vm, RoutingWslcCli cli) NewPage()
@@ -16,6 +16,8 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-001")]
+    [Trait("case", "RB-008")]
     public void FreshPage_PreviewsDetachedRunAndNagsForImageOnly()
     {
         var (vm, _) = NewPage();
@@ -28,6 +30,9 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-002")]
+    [Trait("case", "RB-006")]
+    [Trait("case", "RB-010")]
     public void TypingImage_RebuildsPreviewAndUnlocksExecute()
     {
         var (vm, _) = NewPage();
@@ -41,6 +46,7 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-002")]
     public void WorkdirAndUser_FlowIntoTheGeneratedCommand()
     {
         var (vm, _) = NewPage();
@@ -53,6 +59,9 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-002")]
+    [Trait("case", "RB-009")]
+    [Trait("case", "RB-010")]
     public void IncompletePortRow_NamesItsRowNumberAndBlocksExecute()
     {
         var (vm, _) = NewPage();
@@ -75,6 +84,8 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-035")]
+    [Trait("case", "RB-036")]
     public void PullPolicyDropdown_MapsIndexToFlagBothWays()
     {
         var (vm, _) = NewPage();
@@ -95,6 +106,7 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-030")]
     public void Import_EmptyClipboard_TellsYouNothingWasThere()
     {
         var (vm, _) = NewPage();
@@ -106,6 +118,7 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-029")]
     public void Import_NotARunCommand_ReportsError()
     {
         var (vm, _) = NewPage();
@@ -117,6 +130,9 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-028")]
+    [Trait("case", "RB-031")]
+    [Trait("case", "RB-033")]
     public void Import_FullRunCommand_FillsTheFormAndRebuilds()
     {
         var (vm, _) = NewPage();
@@ -136,6 +152,8 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-003")]
+    [Trait("case", "RB-020")]
     public async Task Execute_Success_ReportsContainerIdAndOutput()
     {
         var (vm, cli) = NewPage();
@@ -153,6 +171,7 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-024")]
     public async Task Execute_NonZeroExit_SurfacesStderrAsError()
     {
         var (vm, cli) = NewPage();
@@ -169,6 +188,7 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-023")]
     public async Task Execute_Cancelled_StopsOnlyTheWslcProcessAndSaysSo()
     {
         var (vm, cli) = NewPage();
@@ -193,6 +213,8 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-025")]
+    [Trait("case", "RB-027")]
     public void CopyOutcome_LandsAsNoticeOrError()
     {
         var (vm, _) = NewPage();
@@ -207,6 +229,7 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-040")]
     public void ClearForm_ResetsEverythingBackToInitialState()
     {
         var (vm, _) = NewPage();
@@ -228,6 +251,7 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-043")]
     public async Task Execute_RecordsHistoryNewestFirst_AndSkipsConsecutiveDuplicates()
     {
         var (vm, cli) = NewPage();
@@ -247,6 +271,7 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-045")]
     public void RestoreFromHistory_FillsTheFormAndAnnouncesIt()
     {
         var history = new RunHistory();
@@ -264,6 +289,7 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-044")]
     public void RunHistory_KeepsAtMostCapacityEntries()
     {
         var history = new RunHistory();
@@ -278,6 +304,8 @@ public class RunBuilderPageViewModelTests
     }
 
     [Fact]
+    [Trait("case", "RB-038")]
+    [Trait("case", "RB-039")]
     public async Task RefreshImages_PopulatesTaggedReferencesOnly_AndSurvivesFailure()
     {
         var (vm, cli) = NewPage();
