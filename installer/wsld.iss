@@ -3,7 +3,7 @@
 ; 别直接跑这个文件 —— 用 `just package` 或 tools/package.ps1,它会先把应用发布成
 ; 自包含版本(带 .NET 运行时 + Windows App SDK),再来编译这里,产出一个 setup.exe。
 ; 手工编译(仅调试脚本时):
-;   iscc.exe /DMyAppVersion=0.0.3 /DPublishDir=..\artifacts\publish installer\wsld.iss
+;   iscc.exe /DMyAppVersion=0.0.4 /DPublishDir=..\artifacts\publish installer\wsld.iss
 
 ; ---- 可由命令行覆盖的参数 ----
 #ifndef MyAppVersion

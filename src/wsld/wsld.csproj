@@ -16,7 +16,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <ApplicationTitle>wsld</ApplicationTitle>
     <!-- 发版改这一行:tools/package.ps1 与安装包版本号都从这里读 -->
-    <Version>0.0.3</Version>
+    <Version>0.0.4</Version>
     <ApplicationIcon>..\..\assets\app.ico</ApplicationIcon>
     <Product>wsld</Product>
     <AssemblyTitle>wsld</AssemblyTitle>

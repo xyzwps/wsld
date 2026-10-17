@@ -49,8 +49,9 @@ just package                 # 或:powershell -File tools\package.ps1
 
 ## 版本号
 
-只有 `src\wsld\wsld.csproj` 里的 `<Version>0.0.3</Version>` 一处:
+只有 `src\wsld\wsld.csproj` 里的 `<Version>0.0.4</Version>` 一处:
 它同时决定 exe 的文件版本和安装包文件名。临时改一次用 `just package -Version 1.2.0`。
+发版要改这一行再打对应的 tag —— 工作流会校验 `v<版本>` 与它是否一致,不一致直接失败。
 
 ## 打 tag 自动发布(GitHub Actions)
 
@@ -84,7 +85,7 @@ just verify-installer -KeepInstalled   # 装完不卸载,自己点一遍中文�
 不想用脚本时的等价手工命令:
 
 ```powershell
-& .\artifacts\installer\wsld-Setup-0.0.3-x64.exe `
+& .\artifacts\installer\wsld-Setup-0.0.4-x64.exe `
   /CURRENTUSER /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /LOG=$env:TEMP\wslc-install.log
 & "$env:LOCALAPPDATA\Programs\wsld\wsld.exe"
 & "$env:LOCALAPPDATA\Programs\wsld\unins000.exe" /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
