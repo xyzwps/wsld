@@ -130,16 +130,16 @@ Docker Desktop 那个 `daemon.json → registry-mirrors` 在 wslc 上没有对�
 
 ### 真机验证(Windows 11 + 真实 wslc 3.0.1)
 
-| 场景 | 结果 | 截图 |
-|---|---|---|
-| 设置页"镜像加速"卡片 | 通过:标题 / 输入框 / 预览行 / 勾选项 / 说明齐全;填 `https://Docker.1ms.run/` 时预览当场显示"输入 redis:7 时,实际会拉取 docker.1ms.run/library/redis:7"(AC1/AC4) | `docs/screenshots/010-settings-mirror.png` |
-| 原样存盘 | 通过:离开页面后 `%LOCALAPPDATA%\wsld\settings.json` 出现 `"RegistryMirror": "https://Docker.1ms.run/"` 与 `"RenameMirrorPull": true` —— 带协议、原大小写(AC7) | — |
-| 这串不像地址 | 通过:预览位置显示"这一串不像注册地址:应写成 registry.example.com,可以带端口或路径前缀。"(AC1) | — |
-| 镜像页的实时预览 | 通过:`redis:7` → "镜像源实际会拉取:docker.1ms.run/library/redis:7";裸名 `hello-world` → "…docker.1ms.run/library/hello-world"(AC2/AC4) | `docs/screenshots/010-images-mirror-pull.png` |
-| 拉取中的进度文案 | 通过:报的是改写后的引用 —— "正在拉取 docker.1ms.run/library/redis:7 · 已等待 N 秒";N 涨到 242 仍未完成,是当时 `docker.1ms.run` 拉 redis 极慢(网络侧),不是应用问题 | 同上 |
-| 取消 | 通过:绿色提示"已取消拉取 docker.1ms.run/library/redis:7";`wslc images` 里没有半截镜像、没有残留的 `wslc` 进程、**没有**发出 tag / rmi(AC5 的取消路径) | — |
-| 端到端改名 | 通过:`hello-world` → 拉取(本机已有,走"已是最新")→ `wslc images` 里 `docker.1ms.run/library/hello-world` 变成 `hello-world`,ID `e2ac70e7319a` 不变 → 提示按用户写的名字报"hello-world 已是最新" → 列表只刷新一次(前后都 4 行)(AC5) | — |
-| 中英双语 | 通过:新增的 10 个文案键在中英两套里都存在、占位符一致 | — |
+| 场景 | 结果 |
+|---|---|
+| 设置页"镜像加速"卡片 | 通过:标题 / 输入框 / 预览行 / 勾选项 / 说明齐全;填 `https://Docker.1ms.run/` 时预览当场显示"输入 redis:7 时,实际会拉取 docker.1ms.run/library/redis:7"(AC1/AC4) |
+| 原样存盘 | 通过:离开页面后 `%LOCALAPPDATA%\wsld\settings.json` 出现 `"RegistryMirror": "https://Docker.1ms.run/"` 与 `"RenameMirrorPull": true` —— 带协议、原大小写(AC7) |
+| 这串不像地址 | 通过:预览位置显示"这一串不像注册地址:应写成 registry.example.com,可以带端口或路径前缀。"(AC1) |
+| 镜像页的实时预览 | 通过:`redis:7` → "镜像源实际会拉取:docker.1ms.run/library/redis:7";裸名 `hello-world` → "…docker.1ms.run/library/hello-world"(AC2/AC4) |
+| 拉取中的进度文案 | 通过:报的是改写后的引用 —— "正在拉取 docker.1ms.run/library/redis:7 · 已等待 N 秒";N 涨到 242 仍未完成,是当时 `docker.1ms.run` 拉 redis 极慢(网络侧),不是应用问题 |
+| 取消 | 通过:绿色提示"已取消拉取 docker.1ms.run/library/redis:7";`wslc images` 里没有半截镜像、没有残留的 `wslc` 进程、**没有**发出 tag / rmi(AC5 的取消路径) |
+| 端到端改名 | 通过:`hello-world` → 拉取(本机已有,走"已是最新")→ `wslc images` 里 `docker.1ms.run/library/hello-world` 变成 `hello-world`,ID `e2ac70e7319a` 不变 → 提示按用户写的名字报"hello-world 已是最新" → 列表只刷新一次(前后都 4 行)(AC5) |
+| 中英双语 | 通过:新增的 10 个文案键在中英两套里都存在、占位符一致 |
 
 走查结束后本机状态已复原:`wslc images` 恢复成走查前那 4 个带 `docker.1ms.run/…` 前缀的镜像
 (`wslc tag hello-world docker.1ms.run/library/hello-world` + `wslc rmi hello-world`,ID 不变),

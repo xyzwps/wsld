@@ -110,13 +110,13 @@
 
 ### 真机验证(Windows 11 + 真实 wslc 3.0.1 + 界面驱动走查)
 
-| 场景 | 结果 | 截图 |
-|---|---|---|
-| 拉取新镜像时的分层进度 | 通过:`docker.1ms.run/library/nginx:1.27-alpine` 上屏 9 行分层状态,`Waiting` / `Download complete` 随刷新原地变化,汇总为"已下载 … · 完成 N/8 层",旁边一句"正在拉取 … · 已等待 N 秒" | `docs/screenshots/011-pull-progress.png` |
-| 网络很慢的时候 | 通过:`docker.1ms.run/library/debian:12-slim` 前 54 秒停在 `Pulling fs layer` / "已下载 0 B",54 秒后变成 `Downloading 532.5kB` / "已下载 532.5 kB",全程用户看得见"卡在哪一层、等了多久"(以前只有一个转圈) | `docs/screenshots/011-pull-stalled.png` |
-| 取消 | 通过:点"取消"后 `wslc` 进程消失、进度区收起、提示"已取消拉取 …";`wslc images` 里没有多出半截镜像 | — |
-| 重复拉已存在的镜像 | 通过:约 2 秒结束,进度一闪而过,提示"… 已是最新",列表照常刷新 | — |
-| 中英双语 | 通过:两个新键在中英两套里都存在、占位符一致 | — |
+| 场景 | 结果 |
+|---|---|
+| 拉取新镜像时的分层进度 | 通过:`docker.1ms.run/library/nginx:1.27-alpine` 上屏 9 行分层状态,`Waiting` / `Download complete` 随刷新原地变化,汇总为"已下载 … · 完成 N/8 层",旁边一句"正在拉取 … · 已等待 N 秒" |
+| 网络很慢的时候 | 通过:`docker.1ms.run/library/debian:12-slim` 前 54 秒停在 `Pulling fs layer` / "已下载 0 B",54 秒后变成 `Downloading 532.5kB` / "已下载 532.5 kB",全程用户看得见"卡在哪一层、等了多久"(以前只有一个转圈) |
+| 取消 | 通过:点"取消"后 `wslc` 进程消失、进度区收起、提示"已取消拉取 …";`wslc images` 里没有多出半截镜像 |
+| 重复拉已存在的镜像 | 通过:约 2 秒结束,进度一闪而过,提示"… 已是最新",列表照常刷新 |
+| 中英双语 | 通过:两个新键在中英两套里都存在、占位符一致 |
 
 走查结束后本机状态已复原:验证期间拉下来的 `busybox:1.36.1`、`busybox:1.36`、`alpine:3.18`、
 `alpine:3.17` 与半途取消的镜像都已清理(逐条 `wslc rmi`),`wslc images` 回到走查前那 9 个镜像;

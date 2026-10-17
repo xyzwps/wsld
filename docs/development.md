@@ -68,3 +68,6 @@ dotnet test --filter FullyQualifiedName~Integration
 
 非打包的 WinUI 3 没有 dev server,布局改完必须启动应用、点一遍、截图确认——
 单元测试覆盖不到视觉宽度、圆角、对齐这类问题,详见 [dev-notes.md](dev-notes.md)。
+
+截图用 `tools/capture-window.ps1` 抓当前运行的窗口,产物落在仓库根的 `capture.png`,
+它只是走查时的过程凭据,**不入代码库**;spec 的验收表只记实测结论(看到什么、量到多少)。

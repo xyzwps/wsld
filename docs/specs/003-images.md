@@ -111,5 +111,4 @@
 - 真实 CLI 冒烟:`WSLD_INTEGRATION=1` 时 `wslc images --format json` 解析通过(只读)。
 - 界面:应用默认停在"容器"页;用 UI Automation 选中左侧"镜像"后切到镜像页(见开发备忘第 11 条),
   两条镜像的名称、大小、引用数、创建时间与 `wslc images` 表格逐条一致。
-- 截图:`docs/screenshots/003-images.png`(镜像页)、`docs/screenshots/003-containers.png`
-  (容器页,确认导航改造没有影响功能 001 / 002)。
+  容器页同时复核,确认导航改造没有影响功能 001 / 002。

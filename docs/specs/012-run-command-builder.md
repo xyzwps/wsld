@@ -158,8 +158,6 @@ Windows 盘符带冒号(`C:\data:/app:ro`)、带空格的值(引号包住)都要
 | 加行稳定性 | 通过:反复加端口 / 挂载 / 变量 / 标签 / tmpfs 行并删行,进程持续存活(修复前一点「添加端口」就退出) |
 | 中英双语 | 通过:`run.*` 键在中英两套都存在 |
 
-界面截图:`docs/screenshots/012-run-builder.png`
-
 ## 已知边界
 
 - **只管 `wslc run`**:compose、多容器编排、`wslc build` 之类不在本功能范围。
