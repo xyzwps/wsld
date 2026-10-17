@@ -39,6 +39,10 @@ itest:
 kill:
     @Stop-Process -Name wsld -ErrorAction SilentlyContinue; "没有在跑的实例也算正常"
 
+# 把当前分支推到 origin,并建立跟踪(远端还没有这个分支时第一次推也要它)
+push:
+    @git push -u origin "$(git branch --show-current)"
+
 # 清理编译产物:dotnet clean + 各项目 bin\obj + artifacts\(发布目录与旧 setup.exe)
 # 应用还开着会删不动,先 just kill;带 -NoDotnetClean 跳过 dotnet clean
 clean *args:
