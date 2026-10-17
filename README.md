@@ -1,62 +1,51 @@
 # wsld
 
-管理 Windows WSL 容器(`wslc` CLI)的 WinUI 3 桌面应用。
+管理 Windows WSL 容器(`wslc` CLI)的 WinUI 3 桌面应用:容器与镜像的列表、启动/停止/重启/删除、
+日志、拉取镜像与实时进度、`wslc run` 命令编排,加上主题与多语言设置——把命令行里那些事做成
+能点、能看、能复制的界面。
 
-## 功能与规格
-每个功能都有对应的 spec 文档(是什么/为什么/预期行为)与单元测试,见 `docs/specs/`。
+![容器列表](docs/screenshots/009-dark-zh-containers.png)
+
+技术栈:WinUI 3(Windows App SDK 2.5,.NET 9,非打包模式)+ 独立的 `wsld.Core`
+业务层(进程调用、解析、ViewModel,与 UI 解耦、可单测)。
+
+## 功能
+
+每个功能都有一份 spec(是什么 / 为什么 / 预期行为)和对应的单元测试。
 
 | 编号 | 功能 | 状态 | 规格 |
 |---|---|---|---|
-| 001 | 容器列表 | 已实现 | docs/specs/001-container-list.md |
-| 002 | 容器生命周期操作(启动/停止/重启/删除) | 已实现 | docs/specs/002-container-actions.md |
-| 003 | 镜像列表与应用导航 | 已实现 | docs/specs/003-images.md |
-| 004 | 镜像操作(拉取 / 删除) | 已实现 | docs/specs/004-image-actions.md |
-| 005 | 容器日志(尾部行数 / 时间戳 / 实时跟随) | 已实现 | docs/specs/005-container-logs.md |
+| 001 | 容器列表 | 已实现 | [docs/specs/001-container-list.md](docs/specs/001-container-list.md) |
+| 002 | 容器生命周期操作(启动/停止/重启/删除) | 已实现 | [docs/specs/002-container-actions.md](docs/specs/002-container-actions.md) |
+| 003 | 镜像列表与应用导航 | 已实现 | [docs/specs/003-images.md](docs/specs/003-images.md) |
+| 004 | 镜像操作(拉取 / 删除) | 已实现 | [docs/specs/004-image-actions.md](docs/specs/004-image-actions.md) |
+| 005 | 容器日志(尾部行数 / 时间戳 / 实时跟随) | 已实现 | [docs/specs/005-container-logs.md](docs/specs/005-container-logs.md) |
 | 006 | 进入容器(执行命令) | 规划 | — |
 | 007 | 资源统计 stats | 规划 | — |
 | 008 | 网络与卷 | 规划 | — |
-| 009 | 设置页(主题 / 语言 i18n)与界面改版 | 已实现 | docs/specs/009-settings-i18n-theme.md |
-| 010 | 镜像加速(registry mirror)配置与拉取改名 | 已实现 | docs/specs/010-registry-mirror.md |
-| 011 | 拉取镜像的实时进度(伪终端屏幕 + 分层汇总) | 已实现 | docs/specs/011-pull-progress.md |
-| 012 | wslc run 命令可视化编排(生成 / 复制 / 就地执行 / 粘贴读回) | 已实现 | docs/specs/012-run-command-builder.md |
+| 009 | 设置页(主题 / 语言 i18n)与界面改版 | 已实现 | [docs/specs/009-settings-i18n-theme.md](docs/specs/009-settings-i18n-theme.md) |
+| 010 | 镜像加速(registry mirror)配置与拉取改名 | 已实现 | [docs/specs/010-registry-mirror.md](docs/specs/010-registry-mirror.md) |
+| 011 | 拉取镜像的实时进度(伪终端屏幕 + 分层汇总) | 已实现 | [docs/specs/011-pull-progress.md](docs/specs/011-pull-progress.md) |
+| 012 | `wslc run` 命令可视化编排(生成 / 复制 / 就地执行 / 粘贴读回) | 已实现 | [docs/specs/012-run-command-builder.md](docs/specs/012-run-command-builder.md) |
 
-## 技术栈
-- WinUI 3(Windows App SDK 2.5,.NET 9,非打包 unpackaged 模式)
-- `wsld.Core`:全部业务逻辑(wslc 进程调用、NDJSON 解析、ViewModel),与 UI 解耦,可单测
-- `wsld`:WinUI 视图壳(左侧导航 + 各功能页面)
-- `wsld.Tests`:xUnit
+## 开始使用
 
-## 构建与运行
-装了 [just](https://github.com/casey/just) 的话,仓库根目录的 `justfile` 里有快捷命令:`just dev`(编译并启动应用)、`just test`(单元测试)、`just itest`(真机冒烟)、`just kill` / `just clean`、`just package`(打安装包)、`just verify-installer`(安装包自检);`just --list` 看全部。
-
-```powershell
-dotnet build wsld.sln
-dotnet test  wsld.sln
-dotnet run --project src/wsld   # 启动桌面应用
-```
-要求:Windows 11 + 已安装 WSL 3(含 `wslc.exe`,默认位于 `C:\Program Files\WSL\wslc.exe`)。
-
-## 打安装包(交付给客户)
+- **只要用起来**:拿 `wsld-Setup-<版本>-x64.exe` 安装包双击安装,客户机不需要预装 .NET
+  或 Windows App SDK;实际使用仍需本机已装 WSL 3。出包与分发见
+  [docs/release-packaging.md](docs/release-packaging.md)。
+- **要改代码**:环境要求、构建/运行/测试命令、工程结构见
+  [docs/development.md](docs/development.md)。
 
 ```powershell
-just package                # 产物:artifacts\installer\wsld-Setup-<版本>-x64.exe,旁边有同名 .sha256
-just package -Version 1.2.0 -Publisher "某某公司"
-just verify-installer       # 自检:静默安装 -> 启动 -> 卸载 -> 查残留,全绿才交付
+just dev    # 编译并启动(需要 just;没有就用 dotnet build + dotnet run,见开发指南)
+just test   # 单元测试
 ```
 
-客户机拿到的是一个 setup.exe:中文向导,包里已经带上 .NET 运行时、Windows App SDK 和 VC++ 运行库,**客户机不需要预装任何东西**(要求 Windows 10 19041 起;实际用还需要本机已装 WSL 3)。没有管理员权限的机器可以选"只为我安装"。
+## 文档
 
-- 版本号只写一处:`src/wsld/wsld.csproj` 里的 `<Version>`,`just package` 会读它,`-Version` 临时覆盖。
-- 构建机需要 [Inno Setup 6](https://jrsoftware.org/isdl.php):`winget install JRSoftware.InnoSetup`。
-- 方案选择、图标、代码签名/SmartScreen、常见问题见 [docs/release-packaging.md](docs/release-packaging.md)。
-
-## 端到端冒烟测试(可选)
-默认 `dotnet test` 只跑不依赖真实 `wslc` 的单元测试(405 个)。
-打开真实 CLI 测试(共 10 项):容器那条会自行创建一个专用容器,跑完 启动/停止/重启/删除 一整个来回后自动清理;
-镜像那几条重复拉取已存在的镜像(其中一条走伪终端,确认拉取进度确实逐帧回调)、尝试删除正被引用的镜像(引擎会拒绝,本机无损)、给已有镜像打一个临时标签再删掉它;
-日志那几条读取未启动容器的空输出、不存在的容器的错误文案,并自建一个每秒打印一行的临时容器,
-验证 `-n` 尾部行数、`-t` 时间戳、跟随的流式回调确实逐行到达、以及取消后不留下半死的 `wslc` 进程。
-```powershell
-$env:WSLD_INTEGRATION = "1"
-dotnet test --filter FullyQualifiedName~Integration
-```
+| 文档 | 讲什么 |
+|---|---|
+| [docs/development.md](docs/development.md) | 环境、命令、工程结构、单元与端到端测试 |
+| [docs/release-packaging.md](docs/release-packaging.md) | 打交付给客户安装包:方案、图标、代码签名/SmartScreen、常见问题 |
+| [docs/specs/](docs/specs/) | 各功能的规格与预期行为 |
+| [docs/dev-notes.md](docs/dev-notes.md) | 会反复踩到、网上查不到的坑(WinUI 3 / 构建 / 布局) |
