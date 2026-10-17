@@ -59,16 +59,24 @@ jobs:
         run: |
           $setup = "artifacts\installer\wsld-Setup-$env:VERSION-x64.exe"
           $sha = (Get-Content "$setup.sha256" -First 1) -split '\s+' | Select-Object -First 1
-          $notes = @(
-            '自包含安装包(含 .NET 9 与 Windows App SDK 运行时,客户机无需另装)。',
-            '',
-            '- 安装向导支持简体中文 / 英文,按系统界面语言自动选择,也可用 `/LANG=en` 或 `/LANG=zh` 强制指定。',
-            '- 要求 Windows 10 19041 以上;管理容器需要本机已装 WSL 3(`wslc`)。',
-            '- 未做代码签名,首次运行会被 SmartScreen 拦一道,核对下面 SHA256 后选择"仍要运行"。',
-            '',
-            "SHA256: $sha"
-          ) -join "`n"
-          gh release create '${{ github.ref_name }}' $setup "$setup.sha256" --title '${{ github.ref_name }}' --notes $notes
+          $tag = '${{ github.ref_name }}'
+          # 同名 Release 可能已经存在(手工建的,或重跑这个 tag):有就复用,没有才建
+          gh release view $tag *> $null
+          if ($LASTEXITCODE -ne 0) {
+            $notes = @(
+              '自包含安装包(含 .NET 9 与 Windows App SDK 运行时,客户机无需另装)。',
+              '',
+              '- 安装向导支持简体中文 / 英文,按系统界面语言自动选择,也可用 `/LANG=en` 或 `/LANG=zh` 强制指定。',
+              '- 要求 Windows 10 19041 以上;管理容器需要本机已装 WSL 3(`wslc`)。',
+              '- 未做代码签名,首次运行会被 SmartScreen 拦一道,核对下面 SHA256 后选择"仍要运行"。',
+              '',
+              "SHA256: $sha"
+            ) -join "`n"
+            gh release create $tag --title $tag --notes $notes
+          }
+          # --clobber:同名的旧附件直接覆盖,重跑不会堆出两份
+          gh release upload $tag $setup "$setup.sha256" --clobber
+          gh release view $tag --json assets,url | Out-Host
         env:
           GH_TOKEN: ${{ github.token }}
 
