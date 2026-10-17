@@ -23,9 +23,10 @@
 #define MyAppExeName "wsld.exe"
 
 [Languages]
-Name: "zh"; MessagesFile: "compiler:Default.isl"
-
-#include "messages.zh-CN.isl"
+; 按系统界面语言自动选:英文系统出英文向导,中文系统出简体中文向导;
+; 都没命中时退回列表第一种(英文)。可用 /LANG=en 或 /LANG=zh 强制指定。
+Name: "en"; MessagesFile: "compiler:Default.isl"
+Name: "zh"; MessagesFile: "messages.zh-CN.isl"
 
 [Setup]
 ; AppId 一旦发布就不要改:升级安装与卸载都靠它认出同一个产品。

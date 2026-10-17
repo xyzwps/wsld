@@ -42,6 +42,8 @@ dotnet run --project src/wsld   # 启动桌面应用
   `Pages`(左侧导航 + 各功能页面)、`Converters`、`Ui`、`Services`
 - `tests/wsld.Tests` —— xUnit
 - `tools/` + `installer/` —— 打包、图标、清理等脚本
+- `.github/workflows/release.yml` —— 推 `v<版本>` tag 自动出安装包并发 GitHub Release,
+  细节见 [docs/release-packaging.md](release-packaging.md) 的"打 tag 自动发布"
 - `assets/` —— 图标母版等素材
 
 ## 测试

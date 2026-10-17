@@ -1,4 +1,4 @@
-﻿; wsld · 安装界面的简体中文文案
+﻿; wsld · 安装界面的简体中文文案(作为 [Languages] 里独立语言注册,不是 include 片段)
 ; Inno Setup 6.7 官方包里没有简体中文语言文件,这里覆盖向导实际会显示的那些消息;
 ; 没覆盖到的(极少数内部错误文案)会退回英文。占位符([name]、%1、%n)必须原样保留。
 
@@ -23,6 +23,7 @@ ButtonWizardBrowse=浏览(&R)...
 ButtonNewFolder=新建文件夹(&N)
 ButtonStopDownload=停止下载
 ButtonStopExtraction=停止解压
+ClickNext=单击“下一步”继续,或单击“取消”退出安装。
 
 ; ---- 各页标题 ----
 WizardSelectDir=选择安装位置

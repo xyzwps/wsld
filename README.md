@@ -51,7 +51,7 @@ just test   # 单元测试
 | 文档 | 讲什么 |
 |---|---|
 | [docs/development.md](docs/development.md) | 环境、命令、工程结构、单元与端到端测试、规格册怎么写 |
-| [docs/release-packaging.md](docs/release-packaging.md) | 打交付给客户安装包:方案、图标、代码签名/SmartScreen、常见问题 |
+| [docs/release-packaging.md](docs/release-packaging.md) | 打交付给客户安装包:方案、双语向导、打 tag 自动发布、代码签名/SmartScreen、常见问题 |
 | [docs/specs/](docs/specs/) | 用例册:用户能看见什么(一条条 Scenario,测试照着对账) |
 | [docs/notes/](docs/notes/index.md) | 依据记录:为什么这么定、实测到的 `wslc` / WinUI 外部行为 |
 | [docs/dev-notes.md](docs/dev-notes.md) | 会反复踩到、网上查不到的坑(WinUI 3 / 构建 / 布局) |

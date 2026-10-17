@@ -43,13 +43,25 @@ just package                 # 或:powershell -File tools\package.ps1
    来源优先级:`installer\prereq\crt\` → Visual Studio 的 `VC\Redist\MSVC\...\x64\Microsoft.VC*.CRT` → `C:\Windows\System32`。
    想固定用某个版本的官方 redist,把 DLL 放到 `installer\prereq\crt\` 即可。
 3. Inno Setup 6 编译 `installer\wsld.iss`:LZMA2 极限压缩(约 226 MB → 约 60 MB),
-   带开始菜单/桌面快捷方式、控制面板里的卸载项、"只为我安装"(无管理员权限也能装)、
-   以及安装界面的中文文案(`installer\messages.zh-CN.isl`)。
+   带开始菜单/桌面快捷方式、控制面板里的卸载项、"只为我安装"(无管理员权限也能装),
+   以及安装向导的双语文案 —— 简体中文(`installer\messages.zh-CN.isl`)与英文
+   (`compiler:Default.isl`),按系统界面语言自动选,也可 `/LANG=zh`、`/LANG=en` 强制指定。
 
 ## 版本号
 
 只有 `src\wsld\wsld.csproj` 里的 `<Version>0.0.3</Version>` 一处:
 它同时决定 exe 的文件版本和安装包文件名。临时改一次用 `just package -Version 1.2.0`。
+
+## 打 tag 自动发布(GitHub Actions)
+
+推一个 `v<版本>` 形式的 tag(如 `v0.0.4`),`.github\workflows\release.yml` 会在
+`windows-latest` 上自动完成:校验 tag 与 csproj `<Version>` 一致(不一致直接失败)→
+跑单元测试 → 静默安装 Inno Setup 6.7.3 → `tools\package.ps1` 出安装包 →
+建 GitHub Release 并附上 `setup.exe` 与 `.sha256`(Actions 页面同时留一份 artifact 下载)。
+
+也就是说正式版出包不再依赖本机:推 tag 就行,本机只用于调试打包链本身。
+CRT 运行库 DLL 已固化在 `installer\prereq\crt\`(仓库内),CI 与本机产物一致,
+不依赖 runner 上有没有 Visual Studio。
 
 ## 客户机要求
 
