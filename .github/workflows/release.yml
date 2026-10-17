@@ -1,4 +1,4 @@
-# 打 tag(如 v0.0.4)即出安装包并发布 GitHub Release
+# 打 tag(如 v0.0.5)即出安装包并发布 GitHub Release
 # 流程:校验 tag 与 csproj <Version> 一致 -> 单元测试 -> 静默安装 Inno Setup
 #       -> tools/package.ps1 出 artifacts\installer\wsld-Setup-<版本>-x64.exe(+ .sha256)
 #       -> gh release create 附上两者
