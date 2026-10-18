@@ -12,18 +12,19 @@
          右列定宽 420:星号列不会缩到内容以下(dev-notes §31),给它固定宽度才不会把表单挤扁。
          卡片 / 节标题 / 提示 / 添加按钮等版式件一律走 App.xaml 的共享样式,本页不再各自复制。 -->
     <Page.Resources>
-        <!-- 字段统一横向铺满、封顶 560:比逐个写死 430/520/620 整齐,窗口再宽也不会拉成面条 -->
+        <!-- 字段铺满所在卡片:能撑多宽由上面那张 StackPanel 的 MaxWidth 决定,
+             这里再各自封顶就会在卡片右边留出一条对不齐的空档 -->
         <Style x:Key="FieldStyle" TargetType="TextBox">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="MaxWidth" Value="560" />
         </Style>
         <Style x:Key="ComboStyle" TargetType="ComboBox">
             <Setter Property="HorizontalAlignment" Value="Left" />
             <Setter Property="MinWidth" Value="170" />
         </Style>
-        <!-- 行内小输入框:宽度写死,谁也不跟谁抢星号列 -->
+        <!-- 行内输入框:进星号列就铺满那一格,宽度由列给,不再逐个写死 -->
         <Style x:Key="RowBoxStyle" TargetType="TextBox">
             <Setter Property="MinWidth" Value="0" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
         <!-- 行内下拉框另起一个样式:Style 的 TargetType 和元素类型不符,
@@ -39,7 +40,9 @@
 
         <!-- ==================== 左:表单 ==================== -->
         <ScrollViewer Grid.Column="0" Padding="20,16,20,24" VerticalScrollBarVisibility="Auto">
-            <StackPanel MaxWidth="700" HorizontalAlignment="Left" Spacing="12">
+            <!-- 居中而不是靠左:窗口宽的时候,多出来的空白摊到表单两侧,
+                 不会全堆成表单与右栏之间那道鸿沟 -->
+            <StackPanel MaxWidth="700" HorizontalAlignment="Center" Spacing="12">
 
                 <!-- 基本信息 -->
                 <Border Style="{StaticResource CardBorderStyle}">
@@ -49,7 +52,7 @@
 
                         <!-- AutoSuggestBox 而不是可编辑 ComboBox:后者没有 TextChanged 事件,
                              敲进去的字要等失焦才提交,右边那条命令就会慢半拍。 -->
-                        <AutoSuggestBox x:Name="ImageBox" HorizontalAlignment="Stretch" MaxWidth="560"
+                        <AutoSuggestBox x:Name="ImageBox" HorizontalAlignment="Stretch"
                                   Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.image}"
                                   PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.image.placeholder}"
                                   AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=run.field.image}"
@@ -289,33 +292,34 @@
                     <StackPanel Spacing="10">
                         <TextBlock Style="{StaticResource SectionHeaderStyle}"
                                    Text="{Binding Converter={StaticResource LocText}, ConverterParameter=run.section.resources}" />
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="180"
+                        <!-- 六个字段摆成三列两行的 Grid:上下两行共用同一套列宽,
+                             谁也不会像写死宽度那样差出十几像素;列是星号,窄窗口也不出界 -->
+                        <Grid ColumnDefinitions="*,*,*" RowDefinitions="Auto,Auto"
+                              ColumnSpacing="10" RowSpacing="10">
+                            <TextBox Grid.Row="0" Grid.Column="0" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.cpus}"
                                      PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.cpus.placeholder}"
                                      Text="{x:Bind ViewModel.Spec.Cpus, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="170"
+                            <TextBox Grid.Row="0" Grid.Column="1" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.memory}"
                                      PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.memory.placeholder}"
                                      Text="{x:Bind ViewModel.Spec.Memory, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="170"
+                            <TextBox Grid.Row="0" Grid.Column="2" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.shm}"
                                      PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.shm.placeholder}"
                                      Text="{x:Bind ViewModel.Spec.ShmSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="180"
+                            <TextBox Grid.Row="1" Grid.Column="0" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.hostname}"
                                      Text="{x:Bind ViewModel.Spec.Hostname, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="180"
+                            <TextBox Grid.Row="1" Grid.Column="1" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.network}"
                                      PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.network.placeholder}"
                                      Text="{x:Bind ViewModel.Spec.Network, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="180"
+                            <TextBox Grid.Row="1" Grid.Column="2" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.user}"
                                      PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.user.placeholder}"
                                      Text="{x:Bind ViewModel.Spec.User, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
+                        </Grid>
                         <TextBox Style="{StaticResource FieldStyle}"
                                  Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.workdir}"
                                  PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.workdir.placeholder}"
@@ -331,23 +335,23 @@
                         <TextBox Style="{StaticResource FieldStyle}"
                                  Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.health.cmd}"
                                  Text="{x:Bind ViewModel.Spec.HealthCmd, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        <StackPanel Orientation="Horizontal" Spacing="10">
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="140"
+                        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="10">
+                            <TextBox Grid.Column="0" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.health.interval}"
                                      PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.duration.placeholder}"
                                      Text="{x:Bind ViewModel.Spec.HealthInterval, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="140"
+                            <TextBox Grid.Column="1" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.health.timeout}"
                                      PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.duration.placeholder}"
                                      Text="{x:Bind ViewModel.Spec.HealthTimeout, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="110"
+                            <TextBox Grid.Column="2" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.health.retries}"
                                      Text="{x:Bind ViewModel.Spec.HealthRetries, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                            <TextBox Style="{StaticResource RowBoxStyle}" Width="140"
+                            <TextBox Grid.Column="3" Style="{StaticResource RowBoxStyle}"
                                      Header="{Binding Converter={StaticResource LocText}, ConverterParameter=run.health.start}"
                                      PlaceholderText="{Binding Converter={StaticResource LocText}, ConverterParameter=run.duration.placeholder}"
                                      Text="{x:Bind ViewModel.Spec.HealthStartPeriod, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
-                        </StackPanel>
+                        </Grid>
                         <CheckBox Content="{Binding Converter={StaticResource LocText}, ConverterParameter=run.no-healthcheck}"
                                   IsChecked="{x:Bind ViewModel.Spec.NoHealthcheck, Mode=TwoWay}" />
                     </StackPanel>
@@ -425,8 +429,10 @@
                 </StackPanel>
             </Border>
 
-            <!-- 主操作铺满整行:一眼看出这是这条链路的终点动作 -->
-            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,4,0,12">
+            <!-- 主操作铺满整行:一眼看出这是这条链路的终点动作。
+                 间距不用 ColumnSpacing:那两列空闲时被 Collapsed,但间距照样占位,
+                 按钮右边就会比上下卡片短出一截;改成各自带左 margin。 -->
+            <Grid Grid.Row="3" ColumnDefinitions="*,Auto,Auto" Margin="0,4,0,12">
                 <Button Grid.Column="0" Style="{ThemeResource AccentButtonStyle}"
                         HorizontalAlignment="Stretch" MinWidth="0" MinHeight="34" Padding="12,6"
                         Command="{x:Bind ViewModel.ExecuteCommand, Mode=OneTime}"
@@ -437,7 +443,8 @@
                     </StackPanel>
                 </Button>
 
-                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" Margin="8,0,0,0"
+                            VerticalAlignment="Center"
                             Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}">
                     <ProgressRing Width="16" Height="16" VerticalAlignment="Center" IsActive="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
                     <TextBlock FontSize="12" VerticalAlignment="Center"
@@ -446,7 +453,7 @@
                 </StackPanel>
 
                 <Button Grid.Column="2" Style="{StaticResource IconOnlyButtonStyle}" Content="&#xE711;"
-                        VerticalAlignment="Center"
+                        Margin="8,0,0,0" VerticalAlignment="Center"
                         Command="{x:Bind ViewModel.CancelCommand, Mode=OneTime}"
                         Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay, Converter={StaticResource BoolToVis}}"
                         ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=run.cancel.tooltip}"
