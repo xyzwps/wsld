@@ -260,13 +260,13 @@
                             ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=action.stop.tooltip}"
                             AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.stop}"
                             IsEnabled="{x:Bind DetailViewModel.CanStop, Mode=OneWay}"
-                            Command="{x:Bind DetailViewModel.StopCommand}" />
+                            Click="DetailStopButton_Click" />
                     <Button Style="{StaticResource IconOnlyButtonStyle}"
                             Content="&#xE72C;"
                             ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=action.restart.tooltip}"
                             AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=action.restart}"
                             IsEnabled="{x:Bind DetailViewModel.CanRestart, Mode=OneWay}"
-                            Command="{x:Bind DetailViewModel.RestartCommand}" />
+                            Click="DetailRestartButton_Click" />
                     <Button Style="{StaticResource DangerIconButtonStyle}"
                             Content="&#xE74D;"
                             ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=action.delete.tooltip}"

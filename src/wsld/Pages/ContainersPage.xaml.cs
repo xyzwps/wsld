@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.IO;
 using System.Runtime.CompilerServices;
+using CommunityToolkit.Mvvm.Input;
 using Microsoft.UI.Dispatching;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -110,34 +111,60 @@ public sealed partial class ContainersPage : Page, INotifyPropertyChanged
         }
     }
 
+    /// <summary>会打断容器里跑着的东西的动作(停止 / 重启 / 删除)先问一句,一键就生效太危险;
+    /// 「启动」不打断任何东西,照旧直接走命令。</summary>
+    private async void DetailStopButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DetailViewModel is null) return;
+        await ConfirmAndRunAsync("dialog.stop-container.title",
+            MessageBody("dialog.stop-container.body", DetailViewModel.DisplayName),
+            T("action.stop"), DetailViewModel.StopCommand);
+    }
+
+    private async void DetailRestartButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (DetailViewModel is null) return;
+        await ConfirmAndRunAsync("dialog.restart-container.title",
+            MessageBody("dialog.restart-container.body", DetailViewModel.DisplayName),
+            T("action.restart"), DetailViewModel.RestartCommand);
+    }
+
     private async void DetailRemoveButton_Click(object sender, RoutedEventArgs e)
     {
         if (DetailViewModel is null) return;
+        await ConfirmAndRunAsync("dialog.delete-container.title",
+            BuildDeleteMessage(DetailViewModel.DisplayName, DetailViewModel.IsRunning),
+            T("action.delete"), DetailViewModel.RemoveCommand);
+    }
 
-        var running = DetailViewModel.IsRunning;
+    /// <summary>确认框的骨架三处共用:标题与正文各说各的,一键下去什么都不发生的那个按钮是默认项。</summary>
+    private async Task ConfirmAndRunAsync(string titleKey, object content, string primaryText, AsyncRelayCommand command)
+    {
         var dialog = new ContentDialog
         {
-            XamlRoot = XamlRoot,
-            Title = T("dialog.delete-container.title"),
-            Content = BuildDeleteMessage(DetailViewModel.DisplayName, running),
-            PrimaryButtonText = T("action.delete"),
+            XamlRoot = XamlRoot, // 非打包 WinUI 3 必须显式设置,否则 ShowAsync 抛异常
+            Title = T(titleKey),
+            Content = content,
+            PrimaryButtonText = primaryText,
             CloseButtonText = T("action.cancel"),
             DefaultButton = ContentDialogButton.Close,
         };
 
         if (await dialog.ShowAsync() != ContentDialogResult.Primary) return;
 
-        await DetailViewModel.RemoveCommand.ExecuteAsync(null);
+        await command.ExecuteAsync(null);
     }
+
+    private static TextBlock MessageBody(string key, params object[] args) => new()
+    {
+        Text = Fmt(key, args),
+        TextWrapping = TextWrapping.Wrap,
+    };
 
     private static object BuildDeleteMessage(string name, bool running)
     {
         var panel = new StackPanel { Spacing = 8 };
-        panel.Children.Add(new TextBlock
-        {
-            Text = Fmt("dialog.delete-container.body", name),
-            TextWrapping = TextWrapping.Wrap,
-        });
+        panel.Children.Add(MessageBody("dialog.delete-container.body", name));
         if (running)
         {
             panel.Children.Add(new TextBlock

@@ -147,6 +147,10 @@ public static class StringTables
             ["logs.status.dropped"] = "已丢弃最早的 {0} 行",
 
             // ---- 界面:确认对话框 ----
+            ["dialog.stop-container.title"] = "停止容器",
+            ["dialog.stop-container.body"] = "确定要停止容器 {0} 吗?容器里正在跑的进程会被终止(wslc stop)。",
+            ["dialog.restart-container.title"] = "重启容器",
+            ["dialog.restart-container.body"] = "确定要重启容器 {0} 吗?重启期间容器里的进程会中断(wslc restart)。",
             ["dialog.delete-container.title"] = "删除容器",
             ["dialog.delete-container.body"] = "确定要删除容器 {0} 吗?此操作不可恢复。",
             ["dialog.delete-container.running"] = "该容器正在运行,将强制停止并删除(wslc remove -f)。",
@@ -424,6 +428,10 @@ public static class StringTables
             ["logs.status.last-loaded"] = "last loaded {0}",
             ["logs.status.dropped"] = "dropped the earliest {0} lines",
 
+            ["dialog.stop-container.title"] = "Stop container",
+            ["dialog.stop-container.body"] = "Stop container {0}? The processes running inside it will be terminated (wslc stop).",
+            ["dialog.restart-container.title"] = "Restart container",
+            ["dialog.restart-container.body"] = "Restart container {0}? Its running processes are interrupted while it restarts (wslc restart).",
             ["dialog.delete-container.title"] = "Remove container",
             ["dialog.delete-container.body"] = "Remove container {0}? This can't be undone.",
             ["dialog.delete-container.running"] = "The container is running, so it will be force-stopped and removed (wslc remove -f).",
