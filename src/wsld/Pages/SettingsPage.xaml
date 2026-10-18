@@ -12,9 +12,11 @@
             <Setter Property="FontSize" Value="13" />
             <Setter Property="Foreground" Value="{ThemeResource TextFillColorSecondaryBrush}" />
         </Style>
-        <!-- 系统默认的单选项很高,横着排一排才不会把设置页撑得看不到底。 -->
+        <!-- 模板里圆圈按控件高度垂直居中,内容默认却贴顶排,顶部 Padding 归零后文字比圆圈高出一截;
+             让内容一起居中才能对齐。 -->
         <Style x:Key="OptionStyle" TargetType="RadioButton">
             <Setter Property="Padding" Value="8,0,0,0" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
         </Style>
     </Page.Resources>
 
