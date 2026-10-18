@@ -45,6 +45,11 @@ public sealed partial class ContainersPage : Page, INotifyPropertyChanged
     public bool DetailHasError => DetailViewModel?.HasError ?? false;
     public string? DetailError => DetailViewModel?.Error;
 
+    /// <summary>强调色只表示"实时正在收":实时跑着才亮「实时日志」,其余时候三颗按钮一律幽灵底。
+    /// 样式写死在 XAML 里时「实时日志」永远顶着强调色,点了「查看日志」它也不让位。</summary>
+    public Style LiveButtonStyle => (Style)Application.Current.Resources[
+        LogsViewModel.IsFollowing ? "AccentButtonStyle" : "GhostButtonStyle"];
+
     public event PropertyChangedEventHandler? PropertyChanged;
 
     private readonly DispatcherUiThread _uiThread;
@@ -101,6 +106,7 @@ public sealed partial class ContainersPage : Page, INotifyPropertyChanged
         {
             if (LogsViewModel.IsFollowing) _logFlushTimer.Start();
             else _logFlushTimer.Stop();
+            OnPropertyChanged(nameof(LiveButtonStyle));
         }
     }
 

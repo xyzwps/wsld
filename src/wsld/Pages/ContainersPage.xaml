@@ -439,11 +439,14 @@
                   Padding="12,4,12,12"
                   Visibility="{x:Bind LogsContentVisible, Mode=OneWay, Converter={StaticResource BoolToVis}}">
                 <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="8">
+                    <!-- 强调色只表示"实时正在收",所以只会亮在「实时日志」上;
+                         「查看日志」是一次性的动作,给它常驻高亮等于宣称"当前屏上是它读来的",
+                         而刚进页签时文本区还空着,那句宣称是假的。 -->
                     <Button Style="{StaticResource GhostButtonStyle}"
                             Content="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.read}"
                             ToolTipService.ToolTip="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.read-tooltip}"
                             Command="{x:Bind LogsViewModel.ReadCommand}" />
-                    <Button Style="{StaticResource AccentButtonStyle}"
+                    <Button Style="{x:Bind LiveButtonStyle, Mode=OneWay}"
                             Content="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.live}"
                             ToolTipService.ToolTip="{x:Bind LogsViewModel.FollowTooltip, Mode=OneWay}"
                             Command="{x:Bind LogsViewModel.FollowCommand}" />
@@ -459,12 +462,16 @@
                 <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="20">
                     <!-- 行数只在「查看日志」这条路上起作用,实时日志不看它(参数拼装里就不发 -n)。
                          SelectedItem 用代码回填:x:Bind TwoWay 在 ComboBox 上会赶上 ItemsSource 赋值那一次通知。 -->
-                    <ComboBox x:Name="TailBox" Width="150" VerticalAlignment="Bottom"
-                              Header="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.lines-header}"
-                              IsEnabled="{x:Bind LogsViewModel.CanChangeOptions, Mode=OneWay}"
-                              ItemsSource="{x:Bind LogsViewModel.TailOptions, Mode=OneTime}"
-                              DisplayMemberPath="Label"
-                              SelectionChanged="Tail_SelectionChanged" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock VerticalAlignment="Center"
+                                   Text="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.lines-label}" />
+                        <ComboBox x:Name="TailBox" Width="150" VerticalAlignment="Center"
+                                  AutomationProperties.Name="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.lines-label}"
+                                  IsEnabled="{x:Bind LogsViewModel.CanChangeOptions, Mode=OneWay}"
+                                  ItemsSource="{x:Bind LogsViewModel.TailOptions, Mode=OneTime}"
+                                  DisplayMemberPath="Label"
+                                  SelectionChanged="Tail_SelectionChanged" />
+                    </StackPanel>
                     <CheckBox VerticalAlignment="Center"
                               Content="{Binding Converter={StaticResource LocText}, ConverterParameter=logs.timestamps}"
                               IsEnabled="{x:Bind LogsViewModel.CanChangeOptions, Mode=OneWay}"
